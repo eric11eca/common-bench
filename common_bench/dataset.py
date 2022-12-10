@@ -14,8 +14,7 @@ from torch.utils.data import RandomSampler, SequentialSampler
 
 from .utils.py_io import read_jsonl
 
-
-class TomiDataReader():
+class DataReader:
     """Custom dataset loader for QA problems."""
 
     @staticmethod
@@ -26,20 +25,8 @@ class TomiDataReader():
         :param args: the configuration arguments
         :rtype instance: situation_modeling.readers.input_example.InputBase
         """
-        guid = instance["guid"]
-        story = instance["story"]
-        question = instance["question"]
-        answer = instance["answer"]
-        metadata = instance["metadata"]
-        reformat = f"$answer$ ; $question$ = {question}; $context$ = {story}"
+        NotImplemented
 
-        data = {
-            "guid": guid,
-            "question": reformat,
-            "answer": answer,
-        }
-
-        return data, metadata
 
     @classmethod
     def jsonl_file_reader(cls, path, config):
@@ -64,6 +51,52 @@ class TomiDataReader():
         return total_qa_data, total_metadata
 
 
+
+class TomiDataReader(DataReader):
+    @staticmethod
+    def _read(instance, args):
+        guid = instance["guid"]
+        story = instance["story"]
+        question = instance["question"]
+        answer = instance["answer"]
+        metadata = instance["metadata"]
+        reformat = f"$answer$ ; $question$ = {question}; $context$ = {story}"
+
+        data = {
+            "guid": guid,
+            "question": reformat,
+            "answer": answer,
+        }
+
+        return data, metadata
+
+class SocialIQADataReader(DataReader):
+    @staticmethod
+    def _read(instance, args):
+        try:
+            guid = instance["guid"]
+        except KeyError:
+            guid = str(uuid.uuid4())
+        context = instance["context"]
+        question = instance["question"]
+        answer = instance["answer"]
+        options = instance["options"]
+        metadata = instance["metadata"]
+
+        options = [f"({i}) {o}" for i, o in enumerate(options)]
+        options = " ".join(options)
+        reformat = f"$answer$ ; $mcoptions$ = {options}; $question$ = {question}; $context$ = {context}"
+
+        data = {
+            "guid": guid,
+            "question": reformat,
+            "answer": answer,
+        }
+
+        return data, metadata
+    
+
+
 class CommonDataset(object):
     def __init__(self, logger, args, tokenizer, data_path, data_type, is_training):
         self.data_path = data_path
@@ -72,7 +105,8 @@ class CommonDataset(object):
         self.args = args
 
         reader_classes = {
-            "tomi": TomiDataReader
+            "tomi": TomiDataReader,
+            "socialiqa": SocialIQADataReader,
         }
         self.reader = reader_classes[args.task]
         self.is_training = is_training
@@ -175,22 +209,6 @@ class CommonDataLoader():
         """
         questions = [data["question"] for data in batch]
         answers = [data["answer"] for data in batch]
-
-        # for data in batch:
-        #     question = data['question']
-        #     answer = data['answer']
-        #     option = data['option']
-
-        #     options = [f"({i}) {o}" for i, o in enumerate(option)]
-        #     options = " ".join(options)
-
-        #     if len(options) > 0:
-        #         reformat = f"$answer$ ; $mcoptions$ = {options}; $question$ = {question}"
-        #     else:
-        #         reformat = f"$answer$ ; $mcoptions$ ; $question$ = {question}"
-
-        #     questions.append(reformat)
-        #     answers.append(answer)
 
         print_out = {
             "guid": [data['guid'] for data in batch],
