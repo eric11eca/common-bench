@@ -39,7 +39,7 @@ def main():
     # Training-related parameters
     parser.add_argument("--train_batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for training.")
-    parser.add_argument("--predict_batch_size", default=4, type=int,
+    parser.add_argument("--predict_batch_size", default=16, type=int,
                         help="Batch size per GPU/CPU for evaluation.")
     parser.add_argument("--learning_rate", default=3e-5, type=float,
                         help="The initial learning rate for Adam.")
@@ -77,8 +77,8 @@ def main():
 
     parser.add_argument("--wandb_api_key", type=str, default="5d22b1d85f1fd5bb0c5758b93903c364ee5dc93d",
                         help="The particular wandb api key to use [default='']")
-    parser.add_argument('--wandb_entity', type=str, default='causal_scaffold')
-    parser.add_argument('--wandb_project', type=str, default='meta_knowledge')
+    parser.add_argument('--wandb_entity', type=str, default='epfl_nlp_phd')
+    parser.add_argument('--wandb_project', type=str, default='common-bench')
     parser.add_argument('--wandb_name', type=str,
                         default='macaw-large-tomi-eval')
     parser.add_argument('--wandb_data', type=str,
@@ -101,7 +101,6 @@ def main():
         os.makedirs(args.output_dir, exist_ok=True)
 
     log_filename = "{}log.txt".format("" if args.do_train else "eval_")
-
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=logging.INFO,

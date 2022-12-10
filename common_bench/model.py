@@ -85,13 +85,13 @@ class TransformerModel(nn.Module):
         device = self.model.device
         
         output_length = 0
-        answers = [data['answer'] for data in print_out]
+        answers = [data for data in print_out['answer']]
         for answer in answers:
             out_ids = self.tokenizer(answer, return_tensors="pt").input_ids
             output_length = max(output_length, out_ids.size(1))
 
         input_length = 0
-        questions = [data['question'] for data in print_out]
+        questions = [data for data in print_out['question']]
         for question in questions:
             input_ids = self.tokenizer(question, return_tensors="pt").input_ids
             input_length = max(input_length, input_ids.size(1))
@@ -130,9 +130,7 @@ class TransformerModel(nn.Module):
         sout = TranslationOutput.from_output(
             self.global_config, raw_output)
         scores = sout.compute_metrics()
-        class_scores = sout.fine_grained_metrics()
         metrics.update(scores)
-        metrics.update(class_scores)
         return (sout, metrics)
 
     def evaluate_output(self, output, out_file=None, metric_file=None, is_test=False):
@@ -198,7 +196,6 @@ class TranslationOutput:
     """Helper class for translation output"""
     config: Dict
     print_data: Dict
-    labels: List[str]
 
     @ classmethod
     def from_output(cls, config, output):

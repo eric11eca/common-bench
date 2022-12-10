@@ -30,15 +30,13 @@ class TomiDataReader():
         story = instance["story"]
         question = instance["question"]
         answer = instance["answer"]
-        options = instance["options"]
         metadata = instance["metadata"]
-        reformat = f"$answer$ ; $mcoptions$ ; $question$ = {story}\n{question}"
+        reformat = f"$answer$ ; $question$ = {question}; $context$ = {story}"
 
         data = {
             "guid": guid,
             "question": reformat,
             "answer": answer,
-            "options": options,
         }
 
         return data, metadata
@@ -57,7 +55,7 @@ class TomiDataReader():
         total_qa_data = []
         for instance in total_data:
             qa_data, metadata = cls._read(instance, config)
-            total_qa_data += qa_data
+            total_qa_data.append(qa_data)
             total_metadata[qa_data["guid"]] = metadata
 
         for data in total_qa_data[:2]:
@@ -82,11 +80,7 @@ class CommonDataset(object):
         self.tokenizer = tokenizer
         self.dataloader = None
         self.load = False
-
-        self.data = self.read_data_from_file()
-
-        if not self.is_training:
-            self.data = self.data[:5000]
+        self.data, self.metadata = self.read_data_from_file()
 
     def __len__(self):
         return len(self.data)
@@ -130,13 +124,10 @@ class CommonDataLoader():
             batch_size = args.predict_batch_size
 
         collate_fn_dict = {
-            "flan-t5": self.text2text_collator,
-            "macaw": self.text2text_collator,
-            "unified-qa": self.text2text_collator,
+            "t5": self.text2text_collator,
         }
-
+        
         collate_fn = collate_fn_dict[args.model_type]
-
         self.dataloader = DataLoader(
             dataset,
             sampler=sampler,
@@ -207,10 +198,8 @@ class CommonDataLoader():
             "answer": answers,
         }
 
-        max_seq_length = max([self.tokenizer(q).input_ids.size()
-                             for q in questions])
-        max_out_length = max([self.tokenizer(a).input_ids.size()
-                             for a in answers])
+        max_seq_length = max([len(self.tokenizer(q).input_ids) for q in questions])
+        max_out_length = max([len(self.tokenizer(a).input_ids) for a in answers])
 
         tokenized_inputs = self.tokenizer(
             questions,
@@ -232,7 +221,7 @@ class CommonDataLoader():
             "input_ids": tokenized_inputs["input_ids"],
             "attention_mask": tokenized_inputs["attention_mask"],
             "labels": tokenized_outputs["input_ids"],
-            "print": print_out,
+            "print_out": print_out,
         }
 
         return feature
