@@ -53,9 +53,10 @@ class TransformerModel(nn.Module):
         :param config: the global configuration
         """
         model_class = model_class_registry[config.model_type]
-        tokenizer = AutoTokenizer.from_pretrained(config.model_name_or_path)
-        model = model_class.from_pretrained(config.model_name_or_path)
-        model_config = AutoConfig.from_pretrained(config.model_name_or_path)
+        hf_name = model_path_hf[config.model_name_or_path]
+        tokenizer = AutoTokenizer.from_pretrained(hf_name)
+        model = model_class.from_pretrained(hf_name)
+        model_config = AutoConfig.from_pretrained(hf_name)
 
         if config.model_type == "gpt":
             model.config.pad_token_id = tokenizer.eos_token_id
@@ -82,36 +83,40 @@ class TransformerModel(nn.Module):
 
     def generate(self, print_out):
         device = self.model.device
-
+        
         output_length = 0
         answers = [data['answer'] for data in print_out]
         for answer in answers:
             out_ids = self.tokenizer(answer, return_tensors="pt").input_ids
             output_length = max(output_length, out_ids.size(1))
 
-        input_ids_batch = []
-        for question in print_out["question"]:
-            input_ids = self.tokenizer(
-                question, return_tensors="pt").input_ids.to(device)
-            input_ids_batch.append(input_ids)
+        input_length = 0
+        questions = [data['question'] for data in print_out]
+        for question in questions:
+            input_ids = self.tokenizer(question, return_tensors="pt").input_ids
+            input_length = max(input_length, input_ids.size(1))
 
-        outputs = []
-        for input_ids in input_ids_batch:
-            greedy_output = self.model.generate(
-                input_ids=input_ids,
-                max_new_tokens=output_length,
-                num_beams=5,
-                early_stopping=True,
-                top_p=None,
-                top_k=5,
-                do_sample=False,
-                num_return_sequences=1,
-                use_cache=True)
-            out = self.tokenizer.decode(
-                greedy_output[0],
-                skip_special_tokens=True)
-            outputs.append(out)
+        input_ids = self.tokenizer(
+            questions, 
+            padding=True,
+            truncation=True,
+            max_length=input_length,
+            return_tensors="pt"
+        ).input_ids.to(device)
+        max_length = input_length + output_length
 
+        greedy_outputs = self.model.generate(
+            input_ids=input_ids,
+            max_length=max_length,
+            num_beams=5,
+            early_stopping=True,
+            num_return_sequences=1,
+            use_cache=True
+        )
+        outputs = self.tokenizer.batch_decode(
+            greedy_outputs,
+            skip_special_tokens=True
+        )
         return outputs
 
     def output_parser_metrics(self, raw_output):
