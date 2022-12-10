@@ -1,18 +1,12 @@
-import re
-import random
 import uuid
-import string
 import torch
-import numpy as np
-
-from string import ascii_uppercase as uppercase
 
 from pprint import pprint
-from collections import Counter
 from torch.utils.data import DataLoader
 from torch.utils.data import RandomSampler, SequentialSampler
 
 from .utils.py_io import read_jsonl
+
 
 class DataReader:
     """Custom dataset loader for QA problems."""
@@ -26,7 +20,6 @@ class DataReader:
         :rtype instance: situation_modeling.readers.input_example.InputBase
         """
         NotImplemented
-
 
     @classmethod
     def jsonl_file_reader(cls, path, config):
@@ -51,7 +44,6 @@ class DataReader:
         return total_qa_data, total_metadata
 
 
-
 class TomiDataReader(DataReader):
     @staticmethod
     def _read(instance, args):
@@ -69,6 +61,7 @@ class TomiDataReader(DataReader):
         }
 
         return data, metadata
+
 
 class SocialIQADataReader(DataReader):
     @staticmethod
@@ -94,7 +87,78 @@ class SocialIQADataReader(DataReader):
         }
 
         return data, metadata
-    
+
+
+class SocialChemDataReader(DataReader):
+    @staticmethod
+    def _read(instance, args):
+        guid = instance["guid"]
+        situation = instance["situation"]
+        action = instance["action"]
+        answer = instance["answer"]
+        options = instance["options"]
+        metadata = instance["metadata"]
+
+        context = f"Situation: {situation}\nAction:{action}"
+        question = f"Given the situation, what do you think about the action?"
+
+        options = [f"({i}) {o}" for i, o in enumerate(options)]
+        options = " ".join(options)
+        reformat = f"$answer$ ; $mcoptions$ = {options}; $question$ = {question}; $context$ = {context}"
+
+        data = {
+            "guid": guid,
+            "question": reformat,
+            "answer": answer,
+        }
+
+        return data, metadata
+
+
+class ScruplesAnecdoteDataReader(DataReader):
+    @staticmethod
+    def _read(instance, args):
+        guid = instance["guid"]
+        story = instance["story"]
+        question = instance["question1"]
+        answer = instance["answer1"]
+        options = instance["options1"]
+        metadata = instance["metadata"]
+
+        options = [f"({i}) {o}" for i, o in enumerate(options)]
+        options = " ".join(options)
+        reformat = f"$answer$ ; $mcoptions$ = {options}; $question$ = {question}; $context$ = {story}"
+
+        data = {
+            "guid": guid,
+            "question": reformat,
+            "answer": answer,
+        }
+
+        return data, metadata
+
+
+class ScruplesDilemmaDataReader(DataReader):
+    @staticmethod
+    def _read(instance, args):
+        guid = instance["guid"]
+        story = instance["story"]
+        question = instance["question"]
+        answer = instance["answer"]
+        options = instance["options"]
+        metadata = instance["metadata"]
+
+        options = [f"({i}) {o}" for i, o in enumerate(options)]
+        options = " ".join(options)
+        reformat = f"$answer$ ; $mcoptions$ = {options}; $question$ = {question}; $context$ = {story}"
+
+        data = {
+            "guid": guid,
+            "question": reformat,
+            "answer": answer,
+        }
+
+        return data, metadata
 
 
 class CommonDataset(object):
@@ -107,6 +171,7 @@ class CommonDataset(object):
         reader_classes = {
             "tomi": TomiDataReader,
             "socialiqa": SocialIQADataReader,
+            "socialchem": SocialChemDataReader,
         }
         self.reader = reader_classes[args.task]
         self.is_training = is_training
@@ -160,7 +225,7 @@ class CommonDataLoader():
         collate_fn_dict = {
             "t5": self.text2text_collator,
         }
-        
+
         collate_fn = collate_fn_dict[args.model_type]
         self.dataloader = DataLoader(
             dataset,
@@ -216,8 +281,10 @@ class CommonDataLoader():
             "answer": answers,
         }
 
-        max_seq_length = max([len(self.tokenizer(q).input_ids) for q in questions])
-        max_out_length = max([len(self.tokenizer(a).input_ids) for a in answers])
+        max_seq_length = max([len(self.tokenizer(q).input_ids)
+                             for q in questions])
+        max_out_length = max([len(self.tokenizer(a).input_ids)
+                             for a in answers])
 
         tokenized_inputs = self.tokenizer(
             questions,
