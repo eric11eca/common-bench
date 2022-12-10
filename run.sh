@@ -1,14 +1,13 @@
-DATASET="clutrr"
-INPUT_FORMAT="lm"
-MODEL_TYPE="gpt2"
-MODEL_NAME_OR_PATH="gpt2"
+DATASET="tomi"
+TASK="tomi"
+MODEL_TYPE="t5"
+MODEL_NAME_OR_PATH="macaw-large"
 TRAIN_BATCH_SIZE=8
 PREDICT_BATCH_SIZE=4
-
+N_GPU=1
 
 python cli_maml.py \
-    --do_train \
-    --baseline \
+    --do_eval \
     --dataset ${DATASET} \
     --model_type ${MODEL_TYPE} \
     --input_format ${INPUT_FORMAT} \
@@ -16,8 +15,6 @@ python cli_maml.py \
     --train_batch_size ${TRAIN_BATCH_SIZE} \
     --predict_batch_size ${PREDICT_BATCH_SIZE} \
     --learning_rate 3e-5 \
-    --wandb_name baseline-${DATASET} \
-    --device_idx 3
-    # --do_eval \
-    # --no_facts
-    # --classifier \
+    --wandb_name ${MODEL_NAME_OR_PATH}-${DATASET}-eval \
+    --n_gpu ${N_GPU} \
+    --device_idx 0

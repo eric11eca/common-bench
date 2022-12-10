@@ -25,8 +25,8 @@ def main():
     parser.add_argument("--output_dir", default="output",
                         type=str, required=False)
 
-    parser.add_argument("--dataset", default="proofwriter_owa_natlang")
-    parser.add_argument("--task", default="clutrr")
+    parser.add_argument("--dataset", default="tomi")
+    parser.add_argument("--task", default="tomi")
 
     parser.add_argument("--model_name_or_path",
                         default="macaw-large", required=False)
@@ -37,9 +37,9 @@ def main():
     parser.add_argument("--do_eval", action='store_true')
 
     # Training-related parameters
-    parser.add_argument("--train_batch_size", default=1, type=int,
+    parser.add_argument("--train_batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for training.")
-    parser.add_argument("--predict_batch_size", default=1, type=int,
+    parser.add_argument("--predict_batch_size", default=16, type=int,
                         help="Batch size per GPU/CPU for evaluation.")
     parser.add_argument("--learning_rate", default=3e-5, type=float,
                         help="The initial learning rate for Adam.")
@@ -58,7 +58,7 @@ def main():
     parser.add_argument('--callback_monitor', type=str, default='val_acc')
     parser.add_argument('--patience', type=int, default=4)
     parser.add_argument('--num_workers', type=int, default=4)
-    parser.add_argument('--n_gpu', type=int, default=4)
+    parser.add_argument('--n_gpu', type=int, default=1)
     parser.add_argument('--load_checkpoint', type=str,
                         default=None, help='path to checkpoint')
 
@@ -77,10 +77,10 @@ def main():
 
     parser.add_argument("--wandb_api_key", type=str, default="5d22b1d85f1fd5bb0c5758b93903c364ee5dc93d",
                         help="The particular wandb api key to use [default='']")
-    parser.add_argument('--wandb_entity', type=str, default='causal_scaffold')
-    parser.add_argument('--wandb_project', type=str, default='meta_knowledge')
+    parser.add_argument('--wandb_entity', type=str, default='epfl_nlp_phd')
+    parser.add_argument('--wandb_project', type=str, default='common-bench')
     parser.add_argument('--wandb_name', type=str,
-                        default='test_classifier_dkg_owa')
+                        default='macaw-large-tomi-eval')
     parser.add_argument('--wandb_data', type=str,
                         default='')
     parser.add_argument("--wandb_note",
@@ -101,7 +101,6 @@ def main():
         os.makedirs(args.output_dir, exist_ok=True)
 
     log_filename = "{}log.txt".format("" if args.do_train else "eval_")
-
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S',
                         level=logging.INFO,
@@ -114,9 +113,6 @@ def main():
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    args.n_gpu = 1
-    args.device = f"cuda:{args.device_idx}" if torch.cuda.is_available(
-    ) else "cpu"
 
     if args.n_gpu > 0:
         torch.cuda.manual_seed_all(args.seed)
@@ -124,18 +120,6 @@ def main():
     if not args.do_train and not args.do_eval:
         raise ValueError(
             "At least one of `do_train` or `do_eval` must be True.")
-
-    if args.do_train:
-        if not args.train_dir:
-            raise ValueError(
-                "If `do_train` is True, then `train_dir` must be specified.")
-        if not args.predict_dir:
-            raise ValueError(
-                "If `do_train` is True, then `predict_dir` must be specified.")
-
-    if args.do_eval and not args.predict_dir:
-        raise ValueError(
-            "If `do_eval` is True, then `predict_dir` must be specified.")
 
     timestr = time.strftime("%Y%m%d-%H%M%S")
     run_dir = f"{args.output_dir}/{timestr}"

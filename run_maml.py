@@ -7,7 +7,7 @@ from torch.optim import AdamW
 from transformers import get_linear_schedule_with_warmup
 
 from common_bench.dataset import CommonDataset
-from common_bench.model import PretrainedEncoderDecoder
+from common_bench.model import TransformerModel
 from common_bench.train import setup_trainer
 from common_bench.utils.wandb_utils import setup_wandb
 
@@ -31,7 +31,7 @@ class CommonBenchRunner(pl.LightningModule):
         self.global_trainin_step = 0
         self.global_epoch_counter = 0
 
-        self.model = PretrainedEncoderDecoder.from_config(config)
+        self.model = TransformerModel.from_config(config)
         self.tokenizer = self.model.tokenizer
 
         self.load_dataset()
@@ -48,24 +48,19 @@ class CommonBenchRunner(pl.LightningModule):
         :returns: dictionary that includes loss
         """
         print_out = batch["print_out"]
+        evaluate = not is_train
 
         features = {
-            "input_ids": batch["input_ids"].to(
-                torch.device(self.hparams.device)),
-            "attention_mask": batch["attention_mask"].to(
-                torch.device(self.hparams.device)),
-            "evaluate": not is_train
+            "input_ids": batch["input_ids"],
+            "attention_mask": batch["attention_mask"]
         }
         if "token_type_ids" in batch:
-            features["token_type_ids"] = batch["token_type_ids"].to(
-                torch.device(self.hparams.device))
+            features["token_type_ids"] = batch["token_type_ids"]
         if "labels" in batch:
-            features["labels"] = batch["labels"].to(
-                torch.device(self.hparams.device))
+            features["labels"] = batch["labels"]
 
-        out = self.model(features, print_out)
-        loss = out["loss"]
-        output_dict = {'loss': loss}
+        out = self.model(features, print_out, evaluate)
+        output_dict = {'loss': out["loss"]}
 
         if not is_train:
             output_dict["print_out"] = out["print_out"]
@@ -239,31 +234,33 @@ class CommonBenchRunner(pl.LightningModule):
 
         """
         self.model_logger.info('Loading dataset')
-        self.train_data = CommonDataset(
-            self.model_logger,
-            self.hparams,
-            self.tokenizer,
-            self.hparams.train_dir,
-            data_type="train",
-            is_training=True
-        )
-        self.dev_data = CommonDataset(
-            self.model_logger,
-            self.hparams,
-            self.tokenizer,
-            self.hparams.train_dir,
-            data_type="dev",
-            is_training=False
-        )
-        self.test_data = self.dev_data
-        # self.test_data = MetaKnowledgeDataset(
-        #     self.model_logger,
-        #     self.hparams,
-        #     self.tokenizer,
-        #     self.hparams.train_dir,
-        #     data_type="test",
-        #     is_training=False
-        # )
+
+        if self.hparams.do_train:
+            self.train_data = CommonDataset(
+                self.model_logger,
+                self.hparams,
+                self.tokenizer,
+                self.hparams.data_dir,
+                data_type="train",
+                is_training=True
+            )
+            self.dev_data = CommonDataset(
+                self.model_logger,
+                self.hparams,
+                self.tokenizer,
+                self.hparams.data_dir,
+                data_type="dev",
+                is_training=False
+            )
+        if self.hparams.do_eval:
+            self.test_data = CommonDataset(
+                self.model_logger,
+                self.hparams,
+                self.tokenizer,
+                self.hparams.data_dir,
+                data_type="test",
+                is_training=False
+            )
         self.model_logger.info('Dataset loaded')
 
     def train_dataloader(self):

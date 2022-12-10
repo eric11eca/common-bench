@@ -16,8 +16,7 @@ from transformers import (
     AutoModelForCausalLM
 )
 
-from common_bench.utils.py_io import write_json
-from common_bench.dataset import dataset_config
+from common_bench.utils.py_io import *
 
 model_class_registry = {
     "t5": AutoModelForSeq2SeqLM,
@@ -32,8 +31,8 @@ model_path_hf = {
     "unified-qa": "allenai/unifiedqa-v2-t5-11b-1251000",
     "gptj": "EleutherAI/gpt-j-6B",
     "macaw": "allenai/macaw-11b",
+    "macaw-large": "allenai/macaw-large",
 }
-
 
 class TransformerModel(nn.Module):
     """Generic transformer-based pretrained encoder decoder (e.g., T5, BART, etc..)
@@ -46,9 +45,6 @@ class TransformerModel(nn.Module):
         self.model = model
         self.model_config = model_config
         self.global_config = global_config
-        self.labels = dataset_config[global_config.dataset_type]["labels"]
-        self.id_to_label = dataset_config[global_config.dataset_type]["id_to_label"]
-        self.label_to_id = dataset_config[global_config.dataset_type]["label_to_id"]
 
     @classmethod
     def from_config(cls, config):
@@ -57,9 +53,10 @@ class TransformerModel(nn.Module):
         :param config: the global configuration
         """
         model_class = model_class_registry[config.model_type]
-        tokenizer = AutoTokenizer.from_pretrained(config.model_name_or_path)
-        model = model_class.from_pretrained(config.model_name_or_path)
-        model_config = AutoConfig.from_pretrained(config.model_name_or_path)
+        hf_name = model_path_hf[config.model_name_or_path]
+        tokenizer = AutoTokenizer.from_pretrained(hf_name)
+        model = model_class.from_pretrained(hf_name)
+        model_config = AutoConfig.from_pretrained(hf_name)
 
         if config.model_type == "gpt":
             model.config.pad_token_id = tokenizer.eos_token_id
@@ -71,51 +68,55 @@ class TransformerModel(nn.Module):
             config,
         )
 
-    def forward(self, features, is_inner=False):
+    def forward(self, features, print_out, evaluate=False):
         """A modified version of forward method for the underlying transformer model.
         :param features: the target inputs
         :param print_out: data to print out during evaluation
         """
-        main_out = {"print_out": features["print_out"]}
+        main_out = {}
         outputs = self.model(**features)
         main_out["loss"] = outputs.loss
-        if "evaluate" in features and features["evaluate"]:
-            main_out["print_out"]["gen_out"] = self.generate(
-                features["print_out"])
+        if evaluate:
+            main_out["print_out"] = print_out
+            main_out["print_out"]["gen_out"] = self.generate(print_out)
         return main_out
 
     def generate(self, print_out):
         device = self.model.device
-
+        
         output_length = 0
-        answers = [data['answer'] for data in print_out]
+        answers = [data for data in print_out['answer']]
         for answer in answers:
             out_ids = self.tokenizer(answer, return_tensors="pt").input_ids
             output_length = max(output_length, out_ids.size(1))
 
-        input_ids_batch = []
-        for question in print_out["question"]:
-            input_ids = self.tokenizer(
-                question, return_tensors="pt").input_ids.to(device)
-            input_ids_batch.append(input_ids)
+        input_length = 0
+        questions = [data for data in print_out['question']]
+        for question in questions:
+            input_ids = self.tokenizer(question, return_tensors="pt").input_ids
+            input_length = max(input_length, input_ids.size(1))
 
-        outputs = []
-        for input_ids in input_ids_batch:
-            greedy_output = self.model.generate(
-                input_ids=input_ids,
-                max_new_tokens=output_length,
-                num_beams=5,
-                early_stopping=True,
-                top_p=None,
-                top_k=5,
-                do_sample=False,
-                num_return_sequences=1,
-                use_cache=True)
-            out = self.tokenizer.decode(
-                greedy_output[0],
-                skip_special_tokens=True)
-            outputs.append(out)
+        input_ids = self.tokenizer(
+            questions, 
+            padding=True,
+            truncation=True,
+            max_length=input_length,
+            return_tensors="pt"
+        ).input_ids.to(device)
+        max_length = input_length + output_length
 
+        greedy_outputs = self.model.generate(
+            input_ids=input_ids,
+            max_length=max_length,
+            num_beams=5,
+            early_stopping=True,
+            num_return_sequences=1,
+            use_cache=True
+        )
+        outputs = self.tokenizer.batch_decode(
+            greedy_outputs,
+            skip_special_tokens=True
+        )
         return outputs
 
     def output_parser_metrics(self, raw_output):
@@ -127,11 +128,9 @@ class TransformerModel(nn.Module):
         """
         metrics = {}
         sout = TranslationOutput.from_output(
-            self.global_config, raw_output, self.labels)
+            self.global_config, raw_output)
         scores = sout.compute_metrics()
-        class_scores = sout.fine_grained_metrics()
         metrics.update(scores)
-        metrics.update(class_scores)
         return (sout, metrics)
 
     def evaluate_output(self, output, out_file=None, metric_file=None, is_test=False):
@@ -167,16 +166,6 @@ class TransformerModel(nn.Module):
         return metrics
 
 
-class EncoderDecoderModel(TransformerModel):
-    def forward(self, features, print_out, is_inner=False):
-        main_out = {"print_out": features["print_out"]}
-        outputs = self.model(**features)
-        main_out["loss"] = outputs.loss
-        if "evaluate" in features and features["evaluate"]:
-            main_out["print_out"]["gen_out"] = self.generate(print_out)
-        return main_out
-
-
 class DecoderModel(TransformerModel):
     def forward(self, features, print_out, is_inner=False):
         main_out = {"print_out": features["print_out"]}
@@ -207,10 +196,9 @@ class TranslationOutput:
     """Helper class for translation output"""
     config: Dict
     print_data: Dict
-    labels: List[str]
 
     @ classmethod
-    def from_output(cls, config, output, labels=None):
+    def from_output(cls, config, output):
         """Loads from raw outputs
 
         :param outputs: the outputs produced by the model
@@ -218,7 +206,7 @@ class TranslationOutput:
 
         print_data = cls.get_print_data(output, "print_out")
 
-        return cls(config=config, print_data=print_data, labels=labels)
+        return cls(config=config, print_data=print_data)
 
     @ classmethod
     def get_print_data(cls, output, print_key):
@@ -232,19 +220,7 @@ class TranslationOutput:
                         if key_name in t[print_key] else [] for t in output]
             print_data[key_name] = [t for t in itertools.chain(*raw_data)]
 
-        inner_outs = []
-        for item in output:
-            if "inner_print_out" in item:
-                inner_outs.append(item["inner_print_out"])
-
-        if len(inner_outs) > 0:
-            print_data["inner_print_out"] = inner_outs
-
         return print_data
-
-    @ property
-    def prefixes(self):
-        return self.print_data.get("prefix", [])
 
     @ property
     def questions(self):
@@ -257,37 +233,6 @@ class TranslationOutput:
     @ property
     def outputs(self):
         return self.print_data.get("gen_out", [])
-
-    def fine_grained_metrics(self):
-        """Computes the fine grained metrics for the output"""
-        targets = self.targets
-        outputs = self.outputs
-        class_count = Counter(targets)
-
-        class_metrics = {}
-        for c in self.labels:
-            if c not in class_count:
-                continue
-            class_metrics[c] = {}
-            class_metrics[c]['acc'] = 0
-            class_metrics[c]['f1'] = 0
-
-        metrics = {}
-        if targets and outputs and len(targets) == len(outputs):
-            for label, gen in zip(targets, outputs):
-                em = self.compute_exact_match(gen, label)
-                f1 = self.compute_f1(gen, label)
-                if label in class_metrics:
-                    class_metrics[label]['acc'] += em
-                    class_metrics[label]['f1'] += f1
-
-            for label in class_metrics:
-                for metric in class_metrics[label]:
-                    total_score = class_metrics[label][metric]
-                    metrics[f"{metric}_{label}"] = total_score / \
-                        class_count[label]
-
-        return metrics
 
     def compute_metrics(self):
         """Returns an exact match accuracy for generation
@@ -343,56 +288,23 @@ class TranslationOutput:
 
         prec = len(common_tokens) / len(pred_tokens)
         rec = len(common_tokens) / len(truth_tokens)
-
         return 2 * (prec * rec) / (prec + rec)
-
-    @ property
-    def generative(self):
-        return True
 
     def enumerate_instances(self):
         """Enumerate through instances for printing
-
         """
         guids = self.print_data["guid"]
-        prefixes = self.prefixes
-
-        text_in = self.print_data["question"]
+        questions = self.questions
         targets = self.targets
         outputs = self.outputs
-
-        inner_loss_prev = self.print_data.get("inner_loss_prev")
-        inner_loss = self.print_data.get("inner_loss")
-        inner_loss_token_prev = self.print_data.get("inner_loss_token_prev")
-        inner_loss_token = self.print_data.get("inner_loss_token")
-        inner_loss_diff = self.print_data.get("inner_loss_diff")
-        inner_out = self.print_data.get("inner_print_out")
-        topk_tokens = self.print_data.get("topk_tokens")
 
         total_outputs = []
         for k, identifier in enumerate(guids):
             instance_dict = {}
             instance_dict["guid"] = identifier
-            instance_dict["prefix"] = prefixes[k]
-            instance_dict["question"] = text_in[k]
+            instance_dict["question"] = questions[k]
             instance_dict["gen_out"] = outputs[k]
             instance_dict["answer"] = targets[k]
-
-            if inner_loss_prev:
-                instance_dict["inner_loss_prev"] = inner_loss_prev[k]
-            if inner_loss:
-                instance_dict["inner_loss"] = inner_loss[k]
-            if inner_loss_token_prev:
-                instance_dict["inner_loss_token_prev"] = inner_loss_token_prev[k]
-            if inner_loss_diff:
-                instance_dict["inner_loss_diff"] = inner_loss_diff[k]
-            if inner_loss_token:
-                instance_dict["inner_loss_token"] = inner_loss_token[k]
-            if inner_out:
-                instance_dict["inner_out"] = inner_out[k]
-            if topk_tokens:
-                instance_dict["topk_tokens"] = topk_tokens[k]
-
             total_outputs.append(instance_dict)
 
         return total_outputs
