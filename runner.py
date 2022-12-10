@@ -54,16 +54,16 @@ class CommonBenchRunner(pl.LightningModule):
             "input_ids": batch["input_ids"],
             "attention_mask": batch["attention_mask"]
         }
-        if "token_type_ids" in batch:
-            features["token_type_ids"] = batch["token_type_ids"]
         if "labels" in batch:
             features["labels"] = batch["labels"]
+        else:
+            features["labels"] = batch["input_ids"]
 
-        out = self.model(features, print_out, evaluate)
-        output_dict = {'loss': out["loss"]}
+        output = self.model(features, print_out, evaluate)
+        output_dict = {'loss': output["loss"]}
 
         if not is_train:
-            output_dict["print_out"] = out["print_out"]
+            output_dict["print_out"] = output["print_out"]
 
         return output_dict
 

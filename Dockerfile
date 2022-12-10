@@ -39,19 +39,17 @@ RUN apt-get update --fix-missing && apt-get install -y \
 # Install requirements
 COPY requirements.txt .
 RUN pip3 install --upgrade pip
-RUN pip3 install -r requirements.txt --default-timeout=1000
-RUN pip3 install torch -f https://download.pytorch.org/whl/cu117.html --default-timeout=1000 
+RUN pip3 install -r requirements.txt --default-timeout=1000 
 
 # Copy code
 RUN mkdir -p /nlp
 RUN mkdir -p /nlp/output/
-COPY meta_kg/ /nlp/meta_kg/
-COPY run_maml.py /nlp/
-COPY cli_maml.py /nlp/
-COPY run_gpt2.sh /nlp/
+COPY common_bench/ /nlp/common_bench/
+COPY runner.py /nlp/
+COPY main.py /nlp/
+COPY run.sh /nlp/
 COPY upload_wandb_data.sh /nlp/
 
 ENV WANDB_API_KEY 5d22b1d85f1fd5bb0c5758b93903c364ee5dc93d
 
-ENTRYPOINT ["./run_gpt2.sh"]
-# CMD ["/bin/bash"]
+ENTRYPOINT ["./run.sh"]

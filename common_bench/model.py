@@ -4,9 +4,8 @@ import wandb
 import itertools
 import torch.nn as nn
 
-from collections import Counter
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 from dataclasses import dataclass
 
 from transformers import (
@@ -30,7 +29,8 @@ model_path_hf = {
     "t0pp": "bigscience/T0pp",
     "unified-qa": "allenai/unifiedqa-v2-t5-11b-1251000",
     "gptj": "EleutherAI/gpt-j-6B",
-    "macaw": "allenai/macaw-11b",
+    "macaw-11b": "allenai/macaw-11b",
+    "macaw-3b": "allenai/macaw-3b",
     "macaw-large": "allenai/macaw-large",
 }
 
@@ -164,31 +164,6 @@ class TransformerModel(nn.Module):
                 wandb.run.log_artifact(artifact)
 
         return metrics
-
-
-class DecoderModel(TransformerModel):
-    def forward(self, features, print_out, is_inner=False):
-        main_out = {"print_out": features["print_out"]}
-        outputs = self.model(**features)
-        main_out["loss"] = outputs.loss
-
-        # lm_logits = outputs.logits
-        # logits = lm_logits[..., :-1, :].contiguous()
-        # labels = features["input_ids"][..., 1:].contiguous()
-        # label_mask = features["token_type_ids"][..., 1:].contiguous()
-
-        # loss_fct = nn.CrossEntropyLoss(reduction="none")
-        # losses = loss_fct(
-        #     logits.view(-1, logits.size(-1)),
-        #     labels.view(-1)
-        # )
-        # losses = losses.view(logits.size(0), logits.size(1)) * label_mask
-        # loss = torch.sum(losses, axis=1) / torch.sum(label_mask, axis=1)
-        # main_out["loss"] = loss.mean()
-
-        if "evaluate" in features and features["evaluate"]:
-            main_out["print_out"]["gen_out"] = self.generate(print_out)
-        return main_out
 
 
 @ dataclass

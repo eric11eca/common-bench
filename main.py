@@ -11,7 +11,7 @@ import random
 import numpy as np
 import torch
 
-from run_maml import run
+from runner import run
 
 
 def main():
@@ -25,11 +25,11 @@ def main():
     parser.add_argument("--output_dir", default="output",
                         type=str, required=False)
 
-    parser.add_argument("--dataset", default="tomi")
-    parser.add_argument("--task", default="tomi")
+    parser.add_argument("--dataset", default="socialiqa")
+    parser.add_argument("--task", default="socialiqa")
 
     parser.add_argument("--model_name_or_path",
-                        default="macaw-large", required=False)
+                        default="macaw-3b", required=False)
     parser.add_argument("--model_type",
                         default="t5", required=False)
 
@@ -39,7 +39,7 @@ def main():
     # Training-related parameters
     parser.add_argument("--train_batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for training.")
-    parser.add_argument("--predict_batch_size", default=16, type=int,
+    parser.add_argument("--predict_batch_size", default=1, type=int,
                         help="Batch size per GPU/CPU for evaluation.")
     parser.add_argument("--learning_rate", default=3e-5, type=float,
                         help="The initial learning rate for Adam.")
@@ -80,7 +80,7 @@ def main():
     parser.add_argument('--wandb_entity', type=str, default='epfl_nlp_phd')
     parser.add_argument('--wandb_project', type=str, default='common-bench')
     parser.add_argument('--wandb_name', type=str,
-                        default='macaw-large-tomi-eval')
+                        default='macaw-3b-socialiqa-eval')
     parser.add_argument('--wandb_data', type=str,
                         default='')
     parser.add_argument("--wandb_note",
