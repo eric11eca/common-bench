@@ -64,8 +64,7 @@ class CommonBenchRunner(pl.LightningModule):
                 torch.device(self.hparams.device))
 
         out = self.model(features, print_out)
-        loss = out["loss"]
-        output_dict = {'loss': loss}
+        output_dict = {'loss': out["loss"]}
 
         if not is_train:
             output_dict["print_out"] = out["print_out"]
@@ -239,31 +238,32 @@ class CommonBenchRunner(pl.LightningModule):
 
         """
         self.model_logger.info('Loading dataset')
-        self.train_data = CommonDataset(
+
+        if self.hparams.do_train:
+            self.train_data = CommonDataset(
+                self.model_logger,
+                self.hparams,
+                self.tokenizer,
+                self.hparams.train_dir,
+                data_type="train",
+                is_training=True
+            )
+            self.dev_data = CommonDataset(
+                self.model_logger,
+                self.hparams,
+                self.tokenizer,
+                self.hparams.train_dir,
+                data_type="dev",
+                is_training=False
+            )
+        self.test_data = MetaKnowledgeDataset(
             self.model_logger,
             self.hparams,
             self.tokenizer,
             self.hparams.train_dir,
-            data_type="train",
-            is_training=True
-        )
-        self.dev_data = CommonDataset(
-            self.model_logger,
-            self.hparams,
-            self.tokenizer,
-            self.hparams.train_dir,
-            data_type="dev",
+            data_type="test",
             is_training=False
         )
-        self.test_data = self.dev_data
-        # self.test_data = MetaKnowledgeDataset(
-        #     self.model_logger,
-        #     self.hparams,
-        #     self.tokenizer,
-        #     self.hparams.train_dir,
-        #     data_type="test",
-        #     is_training=False
-        # )
         self.model_logger.info('Dataset loaded')
 
     def train_dataloader(self):

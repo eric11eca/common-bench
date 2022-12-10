@@ -16,8 +16,7 @@ from transformers import (
     AutoModelForCausalLM
 )
 
-from common_bench.utils.py_io import write_json
-from common_bench.dataset import dataset_config
+from common_bench.utils.py_io import *
 
 model_class_registry = {
     "t5": AutoModelForSeq2SeqLM,
@@ -33,7 +32,6 @@ model_path_hf = {
     "gptj": "EleutherAI/gpt-j-6B",
     "macaw": "allenai/macaw-11b",
 }
-
 
 class TransformerModel(nn.Module):
     """Generic transformer-based pretrained encoder decoder (e.g., T5, BART, etc..)
@@ -71,17 +69,17 @@ class TransformerModel(nn.Module):
             config,
         )
 
-    def forward(self, features, is_inner=False):
+    def forward(self, features, print_out, evaluate=False):
         """A modified version of forward method for the underlying transformer model.
         :param features: the target inputs
         :param print_out: data to print out during evaluation
         """
-        main_out = {"print_out": features["print_out"]}
+        main_out = {}
         outputs = self.model(**features)
         main_out["loss"] = outputs.loss
-        if "evaluate" in features and features["evaluate"]:
-            main_out["print_out"]["gen_out"] = self.generate(
-                features["print_out"])
+        if evaluate:
+            main_out["print_out"] = print_out
+            main_out["print_out"]["gen_out"] = self.generate(print_out)
         return main_out
 
     def generate(self, print_out):
