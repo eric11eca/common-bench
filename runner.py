@@ -3,8 +3,11 @@ import logging
 import pytorch_lightning as pl
 
 from typing import Dict
+from pprint import pprint
 from torch.optim import AdamW
 from transformers import get_linear_schedule_with_warmup
+
+from accelerate import Accelerator
 
 from common_bench.dataset import CommonDataset
 from common_bench.model import TransformerModel
@@ -295,6 +298,56 @@ class CommonBenchRunner(pl.LightningModule):
             'Length of test data loader %d' % len(dataloader)
         )
         return dataloader
+
+
+def run_acclerate(args):
+    accelerator = Accelerator()
+    model = TransformerModel.from_config(args)
+    model = model.to(accelerator.device)
+    tokenizer = model.tokenizer
+
+    test_data = CommonDataset(
+        util_logger,
+        args,
+        tokenizer,
+        args.data_dir,
+        data_type="test",
+        is_training=False
+    )
+
+    dataloader = test_data.load_dataloader()
+    util_logger.info(
+        'Length of test data loader %d' % len(dataloader)
+    )
+
+    model, dataloader = accelerator.prepare(
+        model, dataloader
+    )
+
+    output_all = []
+    for batch in dataloader:
+        print_out = batch["print_out"]
+        features = {
+            "input_ids": batch["input_ids"],
+            "attention_mask": batch["attention_mask"]
+        }
+        if "labels" in batch:
+            features["labels"] = batch["labels"]
+        else:
+            features["labels"] = batch["input_ids"]
+
+        output = model(features, print_out, evaluate=True)
+        output_all.append(output)
+
+    out_file_name = f"test_eval_out.json"
+    metirc_file_name = f"test_metrics.json"
+
+    metrics_out = model.evaluate_output(
+        output_all,
+        f"{args.run_dir}/{out_file_name}",
+        f"{args.run_dir}/{metirc_file_name}"
+    )
+    pprint(metrics_out)
 
 
 def run(args):
