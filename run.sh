@@ -3,12 +3,18 @@
 DATASET="tomi"
 TASK="tomi"
 MODEL_TYPE="t5"
-MODEL_NAME_OR_PATH="macaw-11b"
+MODEL_NAME_OR_PATH="macaw-large"
 TRAIN_BATCH_SIZE=4
-PREDICT_BATCH_SIZE=1
+PREDICT_BATCH_SIZE=4
 N_GPU=1
 
-python cli_maml.py \
+# MODEL_DIR=~/../../nlpdata1/share/zechen/
+
+echo "Downloading data..."
+mkdir -p data/${DATASET}
+wandb artifact get epfl_nlp_phd/data-collection/${DATASET}:latest --root data/${DATASET}
+
+python main.py \
     --do_eval \
     --dataset ${DATASET} \
     --model_type ${MODEL_TYPE} \
