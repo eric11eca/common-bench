@@ -119,10 +119,6 @@ def main():
     if args.n_gpu > 0:
         torch.cuda.manual_seed_all(args.seed)
 
-    if not args.do_train and not args.do_eval:
-        raise ValueError(
-            "At least one of `do_train` or `do_eval` must be True.")
-
     timestr = time.strftime("%Y%m%d-%H%M%S")
     run_dir = f"{args.output_dir}/{timestr}"
     os.makedirs(run_dir, exist_ok=True)

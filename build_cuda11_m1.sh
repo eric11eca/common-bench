@@ -1,4 +1,4 @@
-NUM=3
+NUM=4
 
 CURRENT=${NUM}
 IMAGE_NAME=common_bench
@@ -9,7 +9,7 @@ IMAGE=$IMAGE_NAME_$USER-$GIT_HASH
 IM_NAME=${IMAGE_NAME}_${NUM}
 
 echo "Building $IM_NAME"
-docker buildx build --platform linux/amd64 --load -f $DOCKERFILE_NAME -t $IM_NAME --cache-from type=local,src=../../.docker_cache --cache-to type=local,mode=max,dest=../../.docker_cache .
+docker buildx build --platform linux/amd64 --build-arg DUMMY='' --load -f $DOCKERFILE_NAME -t $IM_NAME --cache-from type=local,src=../../.docker_cache --cache-to type=local,mode=max,dest=../../.docker_cache .
 
 echo "Pushing $IM_NAME to Harbor"
 docker tag $IM_NAME ic-registry.epfl.ch/nlp/$IM_NAME
