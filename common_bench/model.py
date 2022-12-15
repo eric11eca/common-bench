@@ -1,4 +1,5 @@
 import re
+import torch
 import string
 import wandb
 import itertools
@@ -25,14 +26,15 @@ model_class_registry = {
 }
 
 model_path_hf = {
-    "flan-t5": "google/flan-t5-xxl",
-    "t0pp": "bigscience/T0pp",
-    "unified-qa": "allenai/unifiedqa-v2-t5-11b-1251000",
+    "flan-t5": ("google/flan-t5-xxl", "chenz16/flan-xxl-sharded-fp16"),
+    "t0pp": ("bigscience/T0pp", "chenz16/T0pp-11b-sharded-fp16"),
+    "unified-qa": ("allenai/unifiedqa-v2-t5-11b-1251000", "chenz16/unifiedqa-11b-sharded-fp16"),
     "gptj": "EleutherAI/gpt-j-6B",
-    "macaw-11b": "allenai/macaw-11b",
+    "macaw-11b": ("allenai/macaw-11b", "chenz16/macaw-11b-sharded-fp16"),
     "macaw-3b": "allenai/macaw-3b",
     "macaw-large": "allenai/macaw-large",
 }
+
 
 class TransformerModel(nn.Module):
     """Generic transformer-based pretrained encoder decoder (e.g., T5, BART, etc..)
@@ -54,9 +56,18 @@ class TransformerModel(nn.Module):
         """
         model_class = model_class_registry[config.model_type]
         hf_name = model_path_hf[config.model_name_or_path]
-        tokenizer = AutoTokenizer.from_pretrained(hf_name)
-        model = model_class.from_pretrained(hf_name)
-        model_config = AutoConfig.from_pretrained(hf_name)
+        if isinstance(hf_name, tuple):
+            tokenizer = AutoTokenizer.from_pretrained(hf_name[0])
+            model_config = AutoConfig.from_pretrained(hf_name[0])
+            model = model_class.from_pretrained(
+                hf_name[1], device_map="auto",
+                torch_dtype=torch.float16)
+        else:
+            tokenizer = AutoTokenizer.from_pretrained(hf_name)
+            model_config = AutoConfig.from_pretrained(hf_name)
+            model = model_class.from_pretrained(
+                hf_name, device_map="auto",
+                torch_dtype=torch.float16)
 
         if config.model_type == "gpt":
             model.config.pad_token_id = tokenizer.eos_token_id
@@ -83,7 +94,6 @@ class TransformerModel(nn.Module):
 
     def generate(self, print_out):
         device = self.model.device
-        
         output_length = 0
         answers = [data for data in print_out['answer']]
         for answer in answers:
@@ -97,7 +107,7 @@ class TransformerModel(nn.Module):
             input_length = max(input_length, input_ids.size(1))
 
         input_ids = self.tokenizer(
-            questions, 
+            questions,
             padding=True,
             truncation=True,
             max_length=input_length,

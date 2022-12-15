@@ -88,7 +88,7 @@ def setup_trainer(args) -> pl.Trainer:
         max_epochs=args.num_train_epochs,
         gradient_clip_val=args.max_grad_norm,
         accumulate_grad_batches=args.gradient_accumulation_steps,
-        precision=32,
+        precision=16,
         callbacks=callbacks,
         num_sanity_val_steps=4,
         log_every_n_steps=5,

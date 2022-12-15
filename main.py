@@ -75,7 +75,7 @@ def main():
     parser.add_argument('--seed', type=int, default=42,
                         help="random seed for initialization")
 
-    parser.add_argument("--wandb_api_key", type=str, default="5d22b1d85f1fd5bb0c5758b93903c364ee5dc93d",
+    parser.add_argument("--wandb_api_key", type=str, default="9edee5b624841e10c88fcf161d8dc54d4efbee29",
                         help="The particular wandb api key to use [default='']")
     parser.add_argument('--wandb_entity', type=str, default='epfl_nlp_phd')
     parser.add_argument('--wandb_project', type=str, default='common-bench')
