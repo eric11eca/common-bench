@@ -39,17 +39,30 @@ RUN apt-get update --fix-missing && apt-get install -y \
 # Install requirements
 COPY requirements.txt .
 RUN pip3 install --upgrade pip
-RUN pip3 install -r requirements.txt --default-timeout=1000 
+RUN pip3 install -r requirements.txt --default-timeout=1000
+
+ENV CLUSTER_USER zechen 			
+ENV CLUSTER_USER_ID 254670  		
+ENV CLUSTER_GROUP_NAME NLP-StaffU   
+ENV CLUSTER_GROUP_ID 11131 			
 
 # Copy code
 RUN mkdir -p /nlp
 RUN mkdir -p /nlp/output/
+RUN mkdir -p /nlp/data/
 COPY common_bench/ /nlp/common_bench/
 COPY runner.py /nlp/
 COPY main.py /nlp/
 COPY run.sh /nlp/
 COPY upload_wandb_data.sh /nlp/
 
-ENV WANDB_API_KEY 5d22b1d85f1fd5bb0c5758b93903c364ee5dc93d
+ENV WANDB_API_KEY 9edee5b624841e10c88fcf161d8dc54d4efbee29
 
-ENTRYPOINT ["./run.sh"]
+RUN wget https://repo.anaconda.com/archive/Anaconda3-2022.10-Linux-x86_64.sh
+
+RUN chsh -s /bin/bash
+SHELL ["/bin/bash", "-cu"]
+
+# ENTRYPOINT ["./run.sh"]
+ENTRYPOINT []
+CMD ["/bin/bash"]

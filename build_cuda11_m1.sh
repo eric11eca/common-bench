@@ -1,4 +1,4 @@
-NUM=1
+NUM=3
 
 CURRENT=${NUM}
 IMAGE_NAME=common_bench
@@ -17,4 +17,4 @@ docker push ic-registry.epfl.ch/nlp/$IM_NAME
 
 export KUBECONFIG=~/.kube/config_runai
 
-# runai submit --name common-bench -i ic-registry.epfl.ch/nlp/common_bench_1 --attach -g 1
+# runai submit --name common-bench -i ic-registry.epfl.ch/nlp/common_bench_1 --attach --interactive -g 1

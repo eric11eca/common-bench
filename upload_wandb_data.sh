@@ -1,7 +1,7 @@
 DATA_PATH=$1
 DATA_NAME=$2
 
-WANDB_API_KEY="5d22b1d85f1fd5bb0c5758b93903c364ee5dc93d"
+WANDB_API_KEY="9edee5b624841e10c88fcf161d8dc54d4efbee29"
 
 if [ "${WANDB_API_KEY}" == "" ]; then
     exit "please specify wandb api key"
@@ -13,7 +13,7 @@ if [ "${DATA_NAME}" == "" ]; then
     exit "please specify dataset name"
 fi
 
-export WANDB_ENTITY="causal_scaffold"
-export WANDB_PROJECT="data_uploader"
+export WANDB_ENTITY="epfl_nlp_phd"
+export WANDB_PROJECT="data-collection"
 
 wandb artifact put --name ${2} ${1}
