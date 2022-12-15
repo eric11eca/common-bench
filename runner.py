@@ -50,20 +50,21 @@ class CommonBenchRunner(pl.LightningModule):
         print_out = batch["print_out"]
         evaluate = not is_train
 
-        features = {
-            "input_ids": batch["input_ids"],
-            "attention_mask": batch["attention_mask"]
-        }
-        if "labels" in batch:
-            features["labels"] = batch["labels"]
-        else:
-            features["labels"] = batch["input_ids"]
-
-        output = self.model(features, print_out, evaluate)
-        output_dict = {'loss': output["loss"]}
-
         if not is_train:
-            output_dict["print_out"] = output["print_out"]
+            output = self.model({}, print_out, evaluate)
+            output_dict = {'print_out': output["print_out"]}
+        else:
+            features = {
+                "input_ids": batch["input_ids"],
+                "attention_mask": batch["attention_mask"]
+            }
+            if "labels" in batch:
+                features["labels"] = batch["labels"]
+            else:
+                features["labels"] = batch["input_ids"]
+
+            output = self.model(features, print_out, evaluate)
+            output_dict = {'loss': output["loss"]}
 
         return output_dict
 
@@ -144,9 +145,6 @@ class CommonBenchRunner(pl.LightningModule):
         return test_out
 
     def test_epoch_end(self, outputs):
-        test_loss = torch.stack([x["loss"] for x in outputs]).mean()
-        self.log("test_loss", test_loss, on_epoch=True, prog_bar=True)
-
         out_file_name = f"test_eval_out.json"
         metirc_file_name = f"test_metrics.json"
 
