@@ -59,9 +59,9 @@ class TomiDataReader(DataReader):
             reformat = f"{story}\n{question}"
         elif "flan" in args.model_name_or_path:
             reformat = f"{story} \n Q: {question}"
-        elif "T0" in args.model_name_or_path:
+        else:
             promtp = "What is the answer to this question given the context?"
-            reformat = f"context: {story}\nQuestion: {question}\n{promtp}"
+            reformat = f"context: {story}\nquestion: {question}\n{promtp}"
 
         data = {
             "guid": guid,
@@ -94,9 +94,9 @@ class SocialIQADataReader(DataReader):
             reformat = f"{question}\n{context}\n{options}"
         elif "flan" in args.model_name_or_path:
             reformat = f"{context} \n Q: {question}\n{options}"
-        elif "T0" in args.model_name_or_path:
+        else:
             promtp = "Which one of these answers best answers the question according to the context?"
-            reformat = f"context: {context}\nQuestion: {question}\n{promtp}\n{options}"
+            reformat = f"context: {context}\nquestion: {question}\n{promtp}\n{options}"
 
         data = {
             "guid": guid,
@@ -128,9 +128,9 @@ class SocialChemDataReader(DataReader):
             reformat = f"{question}\n{context}\n{options}"
         elif "flan" in args.model_name_or_path:
             reformat = f"{context} \n Q: {question}\n{options}"
-        elif "T0" in args.model_name_or_path:
+        else:
             promtp = "Which one of these answers best answers the question according to the context?"
-            reformat = f"context: {context}\nQuestion: {question}\n{promtp}\n{options}"
+            reformat = f"context: {context}\nquestion: {question}\n{promtp}\n{options}"
 
         data = {
             "guid": guid,
@@ -160,9 +160,9 @@ class ScruplesAnecdoteDataReader(DataReader):
             reformat = f"{question}\n{story}\n{options}"
         elif "flan" in args.model_name_or_path:
             reformat = f"{story} \n Q: {question}\n{options}"
-        elif "T0" in args.model_name_or_path:
+        else:
             promtp = "Which one of these answers best answers the question according to the context?"
-            reformat = f"context: {story}\nQuestion: {question}\n{promtp}\n{options}"
+            reformat = f"context: {story}\nquestion: {question}\n{promtp}\n{options}"
 
         data = {
             "guid": guid,
@@ -192,9 +192,9 @@ class ScruplesDilemmaDataReader(DataReader):
             reformat = f"{question}\n{story}\n{options}"
         elif "flan" in args.model_name_or_path:
             reformat = f"{story} \n Q: {question}\n{options}"
-        elif "T0" in args.model_name_or_path:
+        else:
             promtp = "Which one of these answers best answers the question according to the context?"
-            reformat = f"context: {story}\nQuestion: {question}\n{promtp}\n{options}"
+            reformat = f"context: {story}\nquestion: {question}\n{promtp}\n{options}"
 
         data = {
             "guid": guid,
@@ -224,8 +224,8 @@ class CodahDataReader(DataReader):
             reformat = f"{question}\n{context}\n{options}"
         elif "flan" in args.model_name_or_path:
             reformat = f"{context} \n Q: {question}\n{options}"
-        elif "T0" in args.model_name_or_path:
-            reformat = f"context: {context}\nQuestion: {question}\n{options}"
+        else:
+            reformat = f"context: {context}\nquestion: {question}\n{options}"
 
         data = {
             "guid": guid,
@@ -258,6 +258,8 @@ class CommonDataset(object):
         self.dataloader = None
         self.load = False
         self.data, self.metadata = self.read_data_from_file()
+
+        self.data = self.data[:100]
 
     def __len__(self):
         return len(self.data)
@@ -302,6 +304,9 @@ class CommonDataLoader():
 
         collate_fn_dict = {
             "t5": self.text2text_collator,
+            "bloom": self.causal_lm_collator,
+            "opt": self.causal_lm_collator,
+            "gpt": self.causal_lm_collator,
         }
 
         collate_fn = collate_fn_dict[args.model_type]
@@ -344,11 +349,52 @@ class CommonDataLoader():
 
         return input_ids, attention_mask, token_type_ids
 
+    def causal_lm_collator(self, batch):
+        """Batch collator for this custom class
+        :param batch: an incoming batch
+        """
+        questions = [data["question"] for data in batch]
+        answers = [data["answer"] for data in batch]
+
+        print_out = {
+            "guid": [data['guid'] for data in batch],
+            "question": questions,
+            "answer": answers,
+        }
+
+        max_seq_length = max([len(self.tokenizer(q).input_ids)
+                             for q in questions])
+        max_out_length = max([len(self.tokenizer(a).input_ids)
+                             for a in answers])
+
+        tokenized_inputs = self.tokenizer(
+            questions,
+            padding=True,
+            truncation=True,
+            return_tensors="pt",
+            max_length=max_seq_length,
+        )
+
+        tokenized_outputs = self.tokenizer(
+            answers,
+            padding=True,
+            truncation=True,
+            return_tensors="pt",
+            max_length=max_out_length,
+        )
+
+        feature = {
+            "input_ids": tokenized_inputs["input_ids"],
+            "attention_mask": tokenized_inputs["attention_mask"],
+            "labels": tokenized_outputs["input_ids"],
+            "print_out": print_out,
+        }
+
+        return feature
+
     def text2text_collator(self, batch):
         """Batch collator for this custom class
         :param batch: an incoming batch
-        :param tokenizer: the model tokenizer
-        :param args: the global configuration
         """
         questions = [data["question"] for data in batch]
         answers = [data["answer"] for data in batch]
