@@ -13,7 +13,7 @@ from pytorch_lightning.callbacks.progress.rich_progress import RichProgressBarTh
 
 from .utils.wandb_utils import init_wandb_logger
 
-util_logger = logging.getLogger('meta_knowledge.trainer')
+util_logger = logging.getLogger('common_bench.trainer')
 
 
 def setup_trainer(args) -> pl.Trainer:
@@ -66,22 +66,6 @@ def setup_trainer(args) -> pl.Trainer:
         early_stop_callback,
         progress_bar,
     ]
-
-    # artifact callback
-    # if config.wandb_project and (config.save_wandb_results or config.save_wandb_model):
-
-    #     if not config.wandb_name:
-    #         raise ValueError(
-    #             'TO back up artifacts, must provide name via `--wandb_name`'
-    #         )
-
-    #     artifact_callback = WandbArtifactCallback(
-    #         config.output_dir,
-    #         config.wandb_name,
-    #         config.save_wandb_results,
-    #         config.save_wandb_model,
-    #     )
-    #     callbacks.append(artifact_callback)
 
     train_params = dict(
         accelerator='gpu',
