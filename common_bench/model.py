@@ -31,8 +31,8 @@ model_path_hf = {
     "unified-qa": ("allenai/unifiedqa-v2-t5-11b-1251000", "chenz16/unifiedqa-11b-sharded-fp16"),
     "gptj": "EleutherAI/gpt-j-6B",
     "macaw-11b": ("allenai/macaw-11b", "chenz16/macaw-11b-sharded-fp16"),
-    "macaw-3b": "allenai/macaw-3b",
-    "macaw-large": "allenai/macaw-large",
+    "bloom-3b": ("bigscience/bloom-3b", "sharded-bloom-3b"),
+    "bloom-1b": ("bigscience/bloom-1b7", "sharded-bloom-1b7")
 }
 
 
@@ -48,6 +48,8 @@ class TransformerModel(nn.Module):
         self.model_config = model_config
         self.global_config = global_config
 
+        AutoModelForCausalLM.from_pretrained
+
     @classmethod
     def from_config(cls, config):
         """Loads a pretrained encoder decoder from configuration
@@ -60,13 +62,20 @@ class TransformerModel(nn.Module):
             tokenizer = AutoTokenizer.from_pretrained(hf_name[0])
             model_config = AutoConfig.from_pretrained(hf_name[0])
             model = model_class.from_pretrained(
-                hf_name[1], device_map="auto",
-                torch_dtype=torch.float16)
+                hf_name[1],
+                local_files_only=False,
+                device_map="auto",
+                offload_state_dict=True,
+                offload_folder="offload",
+                torch_dtype=torch.float16
+            )
         else:
             tokenizer = AutoTokenizer.from_pretrained(hf_name)
             model_config = AutoConfig.from_pretrained(hf_name)
             model = model_class.from_pretrained(
                 hf_name, device_map="auto",
+                offload_state_dict=True,
+                offload_folder="offload",
                 torch_dtype=torch.float16)
 
         if config.model_type == "gpt":
@@ -86,10 +95,12 @@ class TransformerModel(nn.Module):
         """
         main_out = {}
         outputs = self.model(**features)
-        main_out["loss"] = outputs.loss
         if evaluate:
             main_out["print_out"] = print_out
             main_out["print_out"]["gen_out"] = self.generate(print_out)
+        else:
+            outputs = self.model(**features)
+            main_out["loss"] = outputs.loss
         return main_out
 
     def generate(self, print_out):
@@ -179,19 +190,17 @@ class TransformerModel(nn.Module):
 @ dataclass
 class TranslationOutput:
     """Helper class for translation output"""
-    config: Dict
     print_data: Dict
 
     @ classmethod
-    def from_output(cls, config, output):
+    def from_output(cls, output):
         """Loads from raw outputs
 
         :param outputs: the outputs produced by the model
         """
 
         print_data = cls.get_print_data(output, "print_out")
-
-        return cls(config=config, print_data=print_data)
+        return cls(print_data=print_data)
 
     @ classmethod
     def get_print_data(cls, output, print_key):
