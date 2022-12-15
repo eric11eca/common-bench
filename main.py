@@ -12,6 +12,7 @@ import numpy as np
 import torch
 
 from runner import run
+from inference import run_acclerate
 
 
 def main():
@@ -35,6 +36,7 @@ def main():
 
     parser.add_argument("--do_train", action='store_true')
     parser.add_argument("--do_eval", action='store_true')
+    parser.add_argument("--do_inference", action='store_true')
 
     # Training-related parameters
     parser.add_argument("--train_batch_size", default=8, type=int,
@@ -126,7 +128,10 @@ def main():
     os.makedirs(run_dir, exist_ok=True)
     args.run_dir = run_dir
 
-    run(args)
+    if args.do_inference:
+        run_acclerate(args)
+    else:
+        run(args)
 
 
 if __name__ == '__main__':
