@@ -205,6 +205,37 @@ class ScruplesDilemmaDataReader(DataReader):
         return data, metadata
 
 
+class CodahDataReader(DataReader):
+    @staticmethod
+    def _read(instance, args):
+        guid = instance["guid"]
+        context = instance["context"]
+        question = instance["question"]
+        answer = instance["answer"]
+        options = instance["options"]
+        metadata = instance["metadata"]
+
+        options = [f"({i}) {o}" for i, o in enumerate(options)]
+        options = " ".join(options)
+
+        if "macaw" in args.model_name_or_path:
+            reformat = f"$answer$ ; $mcoptions$ = {options}; $question$ = {question}; $context$ = {context}"
+        elif "unifiedqa" in args.model_name_or_path:
+            reformat = f"{question}\n{context}\n{options}"
+        elif "flan" in args.model_name_or_path:
+            reformat = f"{context} \n Q: {question}\n{options}"
+        elif "T0" in args.model_name_or_path:
+            reformat = f"context: {context}\nQuestion: {question}\n{options}"
+
+        data = {
+            "guid": guid,
+            "question": reformat,
+            "answer": answer,
+        }
+
+        return data, metadata
+
+
 class CommonDataset(object):
     def __init__(self, logger, args, tokenizer, data_path, data_type, is_training):
         self.data_path = data_path
@@ -218,6 +249,7 @@ class CommonDataset(object):
             "social-chem": SocialChemDataReader,
             "dilemma": ScruplesDilemmaDataReader,
             "anecdote": ScruplesAnecdoteDataReader,
+            "codah": CodahDataReader,
         }
         self.reader = reader_classes[args.task]
         self.is_training = is_training
