@@ -12,6 +12,8 @@ from accelerate import infer_auto_device_map, init_empty_weights
 from transformers import pipeline
 from transformers import AutoTokenizer, AutoConfig
 from transformers import AutoModelForSeq2SeqLM, AutoModelForCausalLM
+from transformers import Text2TextGenerationPipeline
+from transformers.tokenization_utils import TruncationStrategy
 
 from common_bench.dataset import CommonDataset
 from common_bench.model import TranslationOutput
@@ -135,7 +137,7 @@ def evaluate_output(output, wandb_runner, out_file=None, metric_file=None):
         write_json(metrics, metric_file)
 
         artifact = wandb.Artifact(f"test_metrics", type='dataset')
-        artifact.add_file(out_file)
+        artifact.add_file(metric_file)
         wandb_runner.log_artifact(artifact)
 
     return metrics
@@ -153,6 +155,14 @@ def parse_checkpoint_path(args):
     return model_name, local_name, model_class
 
 
+class Text2TextGenerator(Text2TextGenerationPipeline):
+    def preprocess(self, inputs, truncation=TruncationStrategy.DO_NOT_TRUNCATE, **kwargs):
+        inputs = self._parse_and_tokenize(
+            inputs, truncation=truncation, **kwargs)
+        inputs = inputs.to("cuda:0")
+        return inputs
+
+
 def run_acclerate(args):
     wandb_runner = init_wandb(args)
     torch.set_grad_enabled(False)
@@ -164,11 +174,12 @@ def run_acclerate(args):
     model, tokenizer, _ = load_model(model_name, local_name, model_class)
 
     generator = pipeline(
-        "text-generation",
+        # "text-generation",
         tokenizer=tokenizer,
         model=model,
         device_map="auto",
-        torch_dtype=torch.float16
+        torch_dtype=torch.float16,
+        pipeline_class=Text2TextGenerator,
     )
 
     output_all = []
@@ -180,6 +191,8 @@ def run_acclerate(args):
         max_length = input_ids.size(1) + output_ids.size(1)
         pipe_out = generator(
             question,
+            do_sample=True,
+            top_p=0.9,
             max_length=max_length,
             num_return_sequences=1,
             return_full_text=False)
@@ -196,6 +209,9 @@ def run_acclerate(args):
         f"{args.run_dir}/{out_file_name}",
         f"{args.run_dir}/{metirc_file_name}"
     )
+
+    wandb_runner.log(metrics_out)
+
     print("Inference Finished ==== Metrics: ")
     pprint(metrics_out)
     wandb_runner.finish()
