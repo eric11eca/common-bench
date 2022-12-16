@@ -94,7 +94,6 @@ class TransformerModel(nn.Module):
         :param print_out: data to print out during evaluation
         """
         main_out = {}
-        outputs = self.model(**features)
         if evaluate:
             main_out["print_out"] = print_out
             main_out["print_out"]["gen_out"] = self.generate(print_out)
