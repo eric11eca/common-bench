@@ -32,7 +32,8 @@ model_path_hf = {
     "gptj": "EleutherAI/gpt-j-6B",
     "macaw-11b": ("allenai/macaw-11b", "chenz16/macaw-11b-sharded-fp16"),
     "bloom-3b": ("bigscience/bloom-3b", "sharded-bloom-3b"),
-    "bloom-1b": ("bigscience/bloom-1b7", "sharded-bloom-1b7")
+    "bloom-1b": ("bigscience/bloom-1b7", "sharded-bloom-1b7"),
+    "opt":'facebook/opt-66b'
 }
 
 

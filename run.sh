@@ -2,11 +2,11 @@
 
 DATASET="tomi"
 TASK="tomi"
-MODEL_TYPE="t5"
-MODEL_NAME_OR_PATH="macaw-11b"
+MODEL_TYPE="opt"
+MODEL_NAME_OR_PATH="opt-66b"
 TRAIN_BATCH_SIZE=4
 PREDICT_BATCH_SIZE=1
-N_GPU=1
+N_GPU=8
 
 mkdir -p data/${DATASET}
 wandb artifact get epfl_nlp_phd/data-collection/${DATASET}:v0 --root data/${DATASET}

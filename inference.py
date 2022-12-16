@@ -30,7 +30,8 @@ model_path_hf = {
     "gptj": "EleutherAI/gpt-j-6B",
     "macaw-11b": ("allenai/macaw-11b", "chenz16/macaw-11b-sharded-fp16"),
     "bloom-3b": ("bigscience/bloom-3b", "sharded-bloom-3b"),
-    "bloom-1b": ("bigscience/bloom-1b7", "sharded-bloom-1b7")
+    "bloom-1b": ("bigscience/bloom-1b7", "sharded-bloom-1b7"),
+    "opt-66b": "facebook/opt-66b"
 }
 
 model_class_registry = {
@@ -174,12 +175,12 @@ def run_acclerate(args):
     model, tokenizer, _ = load_model(model_name, local_name, model_class)
 
     generator = pipeline(
-        # "text-generation",
+        "text-generation",
         tokenizer=tokenizer,
-        model=model,
-        device_map="auto",
+        model=model.to(torch.float),
+        device_map="balanced_low_0",
         torch_dtype=torch.float16,
-        pipeline_class=Text2TextGenerator,
+        # pipeline_class=Text2TextGenerator,
     )
 
     output_all = []
@@ -191,9 +192,11 @@ def run_acclerate(args):
         max_length = input_ids.size(1) + output_ids.size(1)
         pipe_out = generator(
             question,
-            do_sample=True,
-            top_p=0.9,
-            max_length=max_length,
+            do_sample=False,
+            top_p=1,
+            num_beams=5,
+            top_k=10,
+            max_new_tokens=output_ids.size(1),
             num_return_sequences=1,
             return_full_text=False)
         print_out["gen_out"] = [out[0]["generated_text"].strip()
