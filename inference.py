@@ -1,4 +1,4 @@
-import os
+import random
 import torch
 import wandb
 import logging
@@ -7,31 +7,25 @@ from tqdm import tqdm
 from pathlib import Path
 from pprint import pprint
 
-from accelerate import infer_auto_device_map, init_empty_weights
-
-from transformers import pipeline
 from transformers import AutoTokenizer, AutoConfig
 from transformers import AutoModelForSeq2SeqLM, AutoModelForCausalLM
-from transformers import Text2TextGenerationPipeline
-from transformers.tokenization_utils import TruncationStrategy
 
 from common_bench.dataset import CommonDataset
 from common_bench.model import TranslationOutput
 from common_bench.utils.py_io import *
 
 util_logger = logging.getLogger(
-    'common_bench.runner'
+    'common_bench.inference'
 )
 
 model_path_hf = {
     "flan-t5": ("google/flan-t5-xxl", "chenz16/flan-xxl-sharded-fp16"),
     "t0pp": ("bigscience/T0pp", "chenz16/T0pp-11b-sharded-fp16"),
     "unified-qa": ("allenai/unifiedqa-v2-t5-11b-1251000", "chenz16/unifiedqa-11b-sharded-fp16"),
-    "gptj": "EleutherAI/gpt-j-6B",
+    "gptj": ("EleutherAI/gpt-j-6B", "sharded-gpt-j-6B"),
     "macaw-11b": ("allenai/macaw-11b", "chenz16/macaw-11b-sharded-fp16"),
     "bloom-3b": ("bigscience/bloom-3b", "sharded-bloom-3b"),
-    "bloom-1b": ("bigscience/bloom-1b7", "sharded-bloom-1b7"),
-    "opt-66b": "facebook/opt-66b"
+
 }
 
 model_class_registry = {
@@ -56,14 +50,8 @@ def load_model(model_name, local_name, model_class):
 
     :param args: the arguments for the model runner
     """
-
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     config = AutoConfig.from_pretrained(model_name)
-    # with init_empty_weights():
-    #     model = AutoModelForCausalLM.from_config(config)
-
-    # device_map = infer_auto_device_map(model, dtype="float16")
-    # device_map["lm_head"] = 0
 
     model = model_class.from_pretrained(
         local_name,
@@ -83,13 +71,32 @@ def load_data(args, tokenizer):
     :param args: the arguments for the model runner
     :param tokenizer: the tokenizer for the model runner
     """
+    if args.do_icl:
+        if args.search:
+            data_type = f"train_{args.embedding}"
+        else:
+            data_type = "train"
+        train_data = CommonDataset(
+            util_logger,
+            args,
+            tokenizer,
+            args.data_dir,
+            data_type=data_type,
+            is_training=False,
+            ic_examples=[]
+        )
+        ic_examples = random.choices(train_data.data, k=4)
+    else:
+        ic_examples = []
+
     test_data = CommonDataset(
         util_logger,
         args,
         tokenizer,
         args.data_dir,
         data_type="test",
-        is_training=False
+        is_training=False,
+        ic_examples=ic_examples
     )
 
     dataloader = test_data.load_dataloader()
@@ -156,56 +163,81 @@ def parse_checkpoint_path(args):
     return model_name, local_name, model_class
 
 
-class Text2TextGenerator(Text2TextGenerationPipeline):
-    def preprocess(self, inputs, truncation=TruncationStrategy.DO_NOT_TRUNCATE, **kwargs):
-        inputs = self._parse_and_tokenize(
-            inputs, truncation=truncation, **kwargs)
-        inputs = inputs.to("cuda:0")
-        return inputs
+class Text2Generator():
+    def __init__(self, model, tokenizer):
+        self.model = model
+        self.tokenizer = tokenizer
+        self.tokenizer.pad_token = tokenizer.eos_token
+
+    def generate(self, print_out, **generate_kwargs):
+        device = torch.cuda.current_device()
+
+        output_length = 0
+        answers = [data for data in print_out['answer']]
+        for answer in answers:
+            out_ids = self.tokenizer(answer, return_tensors="pt").input_ids
+            output_length = max(output_length, out_ids.size(1))
+
+        input_length = 0
+        questions = [data for data in print_out['question']]
+        for question in questions:
+            input_ids = self.tokenizer(question, return_tensors="pt").input_ids
+            input_length = max(input_length, input_ids.size(1))
+
+        input_ids = self.tokenizer(
+            questions,
+            padding=True,
+            truncation=True,
+            max_length=input_length,
+            return_tensors="pt"
+        ).input_ids.to(device)
+
+        greedy_outputs = self.model.generate(
+            input_ids.to(device),
+            max_new_tokens=output_length,
+            **generate_kwargs
+        )
+
+        outputs = self.tokenizer.batch_decode(
+            greedy_outputs,
+            skip_special_tokens=True
+        )
+
+        clean_outputs = [gen.replace(q, "")
+                         for q, gen in zip(questions, outputs)]
+
+        return clean_outputs
 
 
 def run_acclerate(args):
-    wandb_runner = init_wandb(args)
     torch.set_grad_enabled(False)
 
     model_name, local_name, model_class = parse_checkpoint_path(args)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    dataloader = load_data(args, tokenizer)
-
     model, tokenizer, _ = load_model(model_name, local_name, model_class)
 
-    generator = pipeline(
-        "text-generation",
-        tokenizer=tokenizer,
-        model=model.to(torch.float),
-        device_map="balanced_low_0",
-        torch_dtype=torch.float16,
-        # pipeline_class=Text2TextGenerator,
-    )
+    if args.model_type != "t5":
+        model.config.pad_token_id = tokenizer.eos_token_id
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.padding_side = 'left'
+
+    dataloader = load_data(args, tokenizer)
+    generator = Text2Generator(model, tokenizer)
 
     output_all = []
     for batch in tqdm(dataloader):
         print_out = batch["print_out"]
-        question = [p for p in print_out['question']]
-        input_ids = batch["input_ids"]
-        output_ids = batch["labels"]
-        max_length = input_ids.size(1) + output_ids.size(1)
-        pipe_out = generator(
-            question,
-            do_sample=False,
-            top_p=1,
+        pipe_out = generator.generate(
+            print_out,
             num_beams=5,
-            top_k=10,
-            max_new_tokens=output_ids.size(1),
-            num_return_sequences=1,
-            return_full_text=False)
-        print_out["gen_out"] = [out[0]["generated_text"].strip()
-                                for out in pipe_out]
+            # top_k=20,
+            num_return_sequences=1)
+        print_out["gen_out"] = pipe_out
         output_all.append({"print_out": print_out})
 
     out_file_name = f"test_eval_out.json"
     metirc_file_name = f"test_metrics.json"
 
+    wandb_runner = init_wandb(args)
     metrics_out = evaluate_output(
         output_all,
         wandb_runner,
@@ -214,7 +246,6 @@ def run_acclerate(args):
     )
 
     wandb_runner.log(metrics_out)
-
     print("Inference Finished ==== Metrics: ")
     pprint(metrics_out)
     wandb_runner.finish()

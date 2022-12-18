@@ -37,6 +37,14 @@ def main():
     parser.add_argument("--do_train", action='store_true')
     parser.add_argument("--do_eval", action='store_true')
     parser.add_argument("--do_inference", action='store_true')
+    parser.add_argument("--do_icl", action='store_true',
+                        help="do in-context learning")
+    parser.add_argument("--num_examples", default=4, type=int,
+                        help="Number of examples to use for in-context learning")
+    parser.add_argument("--search", action='store_true',
+                        help="search for in-context learning examples")
+    parser.add_argument("--embedding", default="simcl",
+                        help="embedding to use for search")
 
     # Training-related parameters
     parser.add_argument("--train_batch_size", default=8, type=int,
@@ -57,12 +65,16 @@ def main():
                         help="Max gradient norm.")
     parser.add_argument("--num_train_epochs", default=5, type=int,
                         help="Total number of training epochs to perform.")
-    parser.add_argument('--callback_monitor', type=str, default='val_acc')
-    parser.add_argument('--patience', type=int, default=4)
-    parser.add_argument('--num_workers', type=int, default=4)
-    parser.add_argument('--n_gpu', type=int, default=1)
-    parser.add_argument('--load_checkpoint', type=str,
-                        default=None, help='path to checkpoint')
+    parser.add_argument('--callback_monitor', type=str, default='val_acc',
+                        help='The metric to monitor for early stopping')
+    parser.add_argument('--patience', type=int, default=4,
+                        help='The number of epochs to wait before early stopping')
+    parser.add_argument('--num_workers', type=int, default=4,
+                        help='The number of workers to use for data loading')
+    parser.add_argument('--n_gpu', type=int, default=1,
+                        help='The number of gpus to use')
+    parser.add_argument('--load_checkpoint', type=str, default=None,
+                        help='path to checkpoint')
 
     # Other parameters
     parser.add_argument("--verbose", action='store_true',
@@ -79,8 +91,10 @@ def main():
 
     parser.add_argument("--wandb_api_key", type=str, default="9edee5b624841e10c88fcf161d8dc54d4efbee29",
                         help="The particular wandb api key to use [default='']")
-    parser.add_argument('--wandb_entity', type=str, default='epfl_nlp_phd')
-    parser.add_argument('--wandb_project', type=str, default='common-bench')
+    parser.add_argument('--wandb_entity', type=str, default='epfl_nlp_phd',
+                        help="The particular wandb entity to use [default='']")
+    parser.add_argument('--wandb_project', type=str, default='common-bench',
+                        help="The particular wandb project to use [default='']")
     parser.add_argument('--wandb_name', type=str,
                         default='macaw-3b-socialiqa-eval')
     parser.add_argument('--wandb_data', type=str,
