@@ -72,20 +72,35 @@ def load_data(args, tokenizer):
     :param tokenizer: the tokenizer for the model runner
     """
     if args.do_icl:
-        if args.search:
-            data_type = f"train_{args.embedding}"
-        else:
-            data_type = "train"
         train_data = CommonDataset(
             util_logger,
             args,
             tokenizer,
             args.data_dir,
-            data_type=data_type,
+            data_type="train",
             is_training=False,
             ic_examples=[]
         )
-        ic_examples = random.choices(train_data.data, k=4)
+
+        if args.search:
+            example_data = read_jsonl(
+                f"./data/{args.dataset}/train_{args.encoder}.jsonl")
+
+            train_dict = {}
+            for instance in train_data.data:
+                key = instance["guid"]
+                train_dict[key] = instance
+
+            ic_examples = {}
+            for instance in example_data:
+                key = instance["guid"]
+                ic_examples[key] = [
+                    train_dict[id] for id in instance["examples"]]
+                assert len(ic_examples[key]) == 16
+                ic_examples[key] = ic_examples[key][:args.num_examples]
+        else:
+            ic_examples = random.choices(
+                train_data.data, k=args.num_examples)
     else:
         ic_examples = []
 

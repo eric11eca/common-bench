@@ -22,7 +22,7 @@ class DataReader:
         NotImplemented
 
     @classmethod
-    def jsonl_file_reader(cls, path, config):
+    def jsonl_file_reader(cls, path, config, examples=[]):
         """The method responsible for parsing in the input file. Implemented here
         to make the overall pipeline more transparent.
 
@@ -35,6 +35,14 @@ class DataReader:
         total_qa_data = []
         for instance in total_data:
             qa_data, metadata = cls._read(instance, config)
+            if isinstance(examples, dict):
+                demos = examples[qa_data["guid"]]
+            else:
+                demos = examples
+            for e in demos:
+                question = qa_data["question"]
+                prompt = f"{e['question']}\n{e['answer']} {question}"
+                qa_data['question'] = prompt
             total_qa_data.append(qa_data)
             total_metadata[qa_data["guid"]] = metadata
 
@@ -237,11 +245,12 @@ class CodahDataReader(DataReader):
 
 
 class CommonDataset(object):
-    def __init__(self, logger, args, tokenizer, data_path, data_type, is_training):
+    def __init__(self, logger, args, tokenizer, data_path, data_type, is_training, ic_examples):
         self.data_path = data_path
         self.data_type = data_type
         self.task_name = args.dataset
         self.args = args
+        self.ic_examples = ic_examples
 
         reader_classes = {
             "tomi": TomiDataReader,
@@ -259,14 +268,15 @@ class CommonDataset(object):
         self.load = False
         self.data, self.metadata = self.read_data_from_file()
 
-        self.data = self.data[:100]
+        self.data = self.data[:1000]
 
     def __len__(self):
         return len(self.data)
 
     def read_data_from_file(self):
         file_path = f"{self.data_path}/{self.task_name}/{self.data_type}.jsonl"
-        file_data = self.reader.jsonl_file_reader(file_path, self.args)
+        file_data = self.reader.jsonl_file_reader(
+            file_path, self.args, self.ic_examples)
         return file_data
 
     def flatten(self, answers):
