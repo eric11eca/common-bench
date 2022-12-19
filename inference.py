@@ -6,13 +6,18 @@ import logging
 from tqdm import tqdm
 from pathlib import Path
 from pprint import pprint
+import openai
 
-from transformers import AutoTokenizer, AutoConfig
+from transformers import AutoTokenizer, AutoConfig, GPT2Tokenizer
+
 from transformers import AutoModelForSeq2SeqLM, AutoModelForCausalLM
 
 from common_bench.dataset import CommonDataset
 from common_bench.model import TranslationOutput
 from common_bench.utils.py_io import *
+
+
+
 
 util_logger = logging.getLogger(
     'common_bench.inference'
@@ -25,7 +30,6 @@ model_path_hf = {
     "gptj": ("EleutherAI/gpt-j-6B", "sharded-gpt-j-6B"),
     "macaw-11b": ("allenai/macaw-11b", "chenz16/macaw-11b-sharded-fp16"),
     "bloom-3b": ("bigscience/bloom-3b", "sharded-bloom-3b"),
-
 }
 
 model_class_registry = {
@@ -247,6 +251,51 @@ def run_acclerate(args):
             # top_k=20,
             num_return_sequences=1)
         print_out["gen_out"] = pipe_out
+        output_all.append({"print_out": print_out})
+
+    out_file_name = f"test_eval_out.json"
+    metirc_file_name = f"test_metrics.json"
+
+    wandb_runner = init_wandb(args)
+    metrics_out = evaluate_output(
+        output_all,
+        wandb_runner,
+        f"{args.run_dir}/{out_file_name}",
+        f"{args.run_dir}/{metirc_file_name}"
+    )
+
+    wandb_runner.log(metrics_out)
+    print("Inference Finished ==== Metrics: ")
+    pprint(metrics_out)
+    wandb_runner.finish()
+
+def run_gpt3(args):
+
+    tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = 'left'
+    dataloader = load_data(args, tokenizer)
+    openai.api_key = args.gpt3_key
+
+    output_all = []
+    for batch in tqdm(dataloader):
+        print_out = batch["print_out"]
+        # pipe_out = generator.generate(
+        #     print_out,
+        #     num_beams=5,
+        #     # top_k=20,
+        #     num_return_sequences=1)
+        # print_out["gen_out"] = pipe_out
+        response = openai.Completion.create(engine="text-davinci-002", 
+                prompt=print_out['question'],
+                temperature=0,
+                max_tokens=1,
+                top_p=0,
+                frequency_penalty=0.0,
+                presence_penalty=0.0
+                )
+
+        print_out["gen_out"] = response['choices'][0]['text']
         output_all.append({"print_out": print_out})
 
     out_file_name = f"test_eval_out.json"
