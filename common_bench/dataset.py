@@ -66,10 +66,10 @@ class TomiDataReader(DataReader):
         elif "unifiedqa" in args.model_name_or_path:
             reformat = f"{story}\n{question}"
         elif "flan" in args.model_name_or_path:
-            reformat = f"{story} \n Q: {question}"
+            reformat = f"{story} \n Q: {question}\n A:"
         else:
             promtp = "What is the answer to this question given the context?"
-            reformat = f"context: {story}\nquestion: {question}\n{promtp}"
+            reformat = f"context: {story}\nquestion: {question}\n{promtp}\nanswer:"
 
         data = {
             "guid": guid,
