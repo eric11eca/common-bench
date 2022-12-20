@@ -280,22 +280,19 @@ def run_gpt3(args):
     output_all = []
     for batch in tqdm(dataloader):
         print_out = batch["print_out"]
-        # pipe_out = generator.generate(
-        #     print_out,
-        #     num_beams=5,
-        #     # top_k=20,
-        #     num_return_sequences=1)
-        # print_out["gen_out"] = pipe_out
-        response = openai.Completion.create(engine="text-davinci-002", 
+        # print(print_out)
+ 
+        response = openai.Completion.create(engine="text-davinci-003", 
                 prompt=print_out['question'],
                 temperature=0,
-                max_tokens=1,
-                top_p=0,
+                max_tokens=100,
+                top_p=1,
                 frequency_penalty=0.0,
                 presence_penalty=0.0
                 )
 
-        print_out["gen_out"] = response['choices'][0]['text']
+        print_out["gen_out"] = response.choices[0].text.strip().replace("\n", "")
+        print(response['choices'])
         output_all.append({"print_out": print_out})
 
     out_file_name = f"test_eval_out.json"
