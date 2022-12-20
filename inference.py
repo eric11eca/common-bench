@@ -30,6 +30,7 @@ model_path_hf = {
     "gptj": ("EleutherAI/gpt-j-6B", "sharded-gpt-j-6B"),
     "macaw-11b": ("allenai/macaw-11b", "chenz16/macaw-11b-sharded-fp16"),
     "bloom-3b": ("bigscience/bloom-3b", "sharded-bloom-3b"),
+    'opt-66b':('facebook/opt-66b','/nlpdata1/home/sooh/opt66/'
 }
 
 model_class_registry = {
@@ -61,7 +62,7 @@ def load_model(model_name, local_name, model_class):
         local_name,
         local_files_only=False,
         device_map="auto",
-        torch_dtype=torch.float16,
+        torch_dtype=torch.bfloat16,
         offload_folder="offload",
         offload_state_dict=True
     )
