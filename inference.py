@@ -6,7 +6,7 @@ import logging
 from tqdm import tqdm
 from pathlib import Path
 from pprint import pprint
-import openai
+# import openai
 
 from transformers import AutoTokenizer, AutoConfig, GPT2Tokenizer
 
@@ -30,7 +30,7 @@ model_path_hf = {
     "gptj": ("EleutherAI/gpt-j-6B", "sharded-gpt-j-6B"),
     "macaw-11b": ("allenai/macaw-11b", "chenz16/macaw-11b-sharded-fp16"),
     "bloom-3b": ("bigscience/bloom-3b", "sharded-bloom-3b"),
-    'opt-66b':('facebook/opt-66b','/nlpdata1/home/sooh/opt66/'
+    'opt-66b':('facebook/opt-66b','/nlpdata1/home/sooh/opt66/')
 }
 
 model_class_registry = {
@@ -286,14 +286,13 @@ def run_gpt3(args):
         response = openai.Completion.create(engine="text-davinci-003", 
                 prompt=print_out['question'],
                 temperature=0,
-                max_tokens=100,
+                max_tokens=10,
                 top_p=1,
                 frequency_penalty=0.0,
                 presence_penalty=0.0
                 )
 
-        print_out["gen_out"] = response.choices[0].text.strip().replace("\n", "")
-        print(response['choices'])
+        print_out["gen_out"] = [response.choices[0].text.strip().replace("\n", "")]
         output_all.append({"print_out": print_out})
 
     out_file_name = f"test_eval_out.json"
