@@ -66,10 +66,9 @@ class TomiDataReader(DataReader):
         elif "unifiedqa" in args.model_name_or_path:
             reformat = f"{story}\n{question}"
         elif "flan" in args.model_name_or_path:
-            reformat = f"{story} \n Q: {question}"
+            reformat = f"{story} \nQ: {question}\nA:"
         else:
-            promtp = "What is the answer to this question given the context?"
-            reformat = f"context: {story}\nquestion: {question}\n{promtp}"
+            reformat = f"Context: {story}\nQuestion: {question}\nAnswer:"
 
         data = {
             "guid": guid,
@@ -93,6 +92,11 @@ class SocialIQADataReader(DataReader):
         options = instance["options"]
         metadata = instance["metadata"]
 
+        for i, o in enumerate(options):
+            if o == answer:
+                answer = f"{i}"
+                break
+
         options = [f"({i}) {o}" for i, o in enumerate(options)]
         options = " ".join(options)
 
@@ -101,10 +105,9 @@ class SocialIQADataReader(DataReader):
         elif "unifiedqa" in args.model_name_or_path:
             reformat = f"{question}\n{context}\n{options}"
         elif "flan" in args.model_name_or_path:
-            reformat = f"{context} \n Q: {question}\n{options}"
+            reformat = f"{context} \n Q: {question}\n{options}\nA:"
         else:
-            promtp = "Which one of these answers best answers the question according to the context?"
-            reformat = f"context: {context}\nquestion: {question}\n{promtp}\n{options}"
+            reformat = f"Context: {context}\nQuestion: {question}\nOptions:{options}\nAnswer:"
 
         data = {
             "guid": guid,
@@ -128,6 +131,11 @@ class SocialChemDataReader(DataReader):
         context = f"Situation: {situation}\nAction:{action}"
         question = f"Given the situation, what do you think about the action?"
 
+        for i, o in enumerate(options):
+            if o == answer:
+                answer = f"{i}"
+                break
+
         options = [f"({i}) {o}" for i, o in enumerate(options)]
         options = " ".join(options)
         if "macaw" in args.model_name_or_path:
@@ -135,10 +143,10 @@ class SocialChemDataReader(DataReader):
         elif "unifiedqa" in args.model_name_or_path:
             reformat = f"{question}\n{context}\n{options}"
         elif "flan" in args.model_name_or_path:
-            reformat = f"{context} \n Q: {question}\n{options}"
+            reformat = f"{context} \n Q: {question}\n{options}\nA:"
         else:
-            promtp = "Which one of these answers best answers the question according to the context?"
-            reformat = f"context: {context}\nquestion: {question}\n{promtp}\n{options}"
+            # promtp = "Which option best answers the question based on the context?"
+            reformat = f"Context: {context}\nQuestion: {question}\nOptions:{options}\nAnswer:"
 
         data = {
             "guid": guid,
@@ -167,10 +175,10 @@ class ScruplesAnecdoteDataReader(DataReader):
         elif "unifiedqa" in args.model_name_or_path:
             reformat = f"{question}\n{story}\n{options}"
         elif "flan" in args.model_name_or_path:
-            reformat = f"{story} \n Q: {question}\n{options}"
+            reformat = f"{context} \n Q: {question}\n{options}\nA:"
         else:
-            promtp = "Which one of these answers best answers the question according to the context?"
-            reformat = f"context: {story}\nquestion: {question}\n{promtp}\n{options}"
+            #promtp = "Which one of these options best answers the question according to the context?"
+            reformat = f"Context: {story}\nQuestion: {question}\nOptions:{options}\nAnswer:"
 
         data = {
             "guid": guid,
@@ -199,10 +207,10 @@ class ScruplesDilemmaDataReader(DataReader):
         elif "unifiedqa" in args.model_name_or_path:
             reformat = f"{question}\n{story}\n{options}"
         elif "flan" in args.model_name_or_path:
-            reformat = f"{story} \n Q: {question}\n{options}"
+            reformat = f"{context} \n Q: {question}\n{options}\nA:"
         else:
-            promtp = "Which one of these answers best answers the question according to the context?"
-            reformat = f"context: {story}\nquestion: {question}\n{promtp}\n{options}"
+            #promtp = "Which one of these answers best answers the question according to the context?"
+            reformat = f"Context: {story}\nQuestion: {question}\nOptions:{options}\nAnswer:"
 
         data = {
             "guid": guid,
@@ -231,9 +239,9 @@ class CodahDataReader(DataReader):
         elif "unifiedqa" in args.model_name_or_path:
             reformat = f"{question}\n{context}\n{options}"
         elif "flan" in args.model_name_or_path:
-            reformat = f"{context} \n Q: {question}\n{options}"
+            reformat = f"{context} \n Q: {question}\n{options}\nA:"
         else:
-            reformat = f"context: {context}\nquestion: {question}\n{options}"
+            reformat = f"Context: {context}\nQuestion: {question}\nOptions:{options}\nAnswer:"
 
         data = {
             "guid": guid,
@@ -268,7 +276,7 @@ class CommonDataset(object):
         self.load = False
         self.data, self.metadata = self.read_data_from_file()
 
-        self.data = self.data[:1000]
+        # self.data = self.data[:100]
 
     def __len__(self):
         return len(self.data)
@@ -369,7 +377,7 @@ class CommonDataLoader():
         print_out = {
             "guid": [data['guid'] for data in batch],
             "question": questions,
-            "answer": answers,
+            "answer": answers
         }
 
         max_seq_length = max([len(self.tokenizer(q).input_ids)
