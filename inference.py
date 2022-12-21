@@ -3,21 +3,21 @@ import torch
 import wandb
 import logging
 import openai
+import numpy as np
 
 from tqdm import tqdm
 from pathlib import Path
 from pprint import pprint
-# import openai
 
-from transformers import AutoTokenizer, AutoConfig, GPT2Tokenizer
-
+from transformers import StoppingCriteria, StoppingCriteriaList
+from transformers import AutoTokenizer, AutoConfig
 from transformers import AutoModelForSeq2SeqLM, AutoModelForCausalLM
 
 from common_bench.dataset import CommonDataset
 from common_bench.model import TranslationOutput
 from common_bench.utils.py_io import *
 
-openai.api_key = "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"
+openai.api_key = "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"
 openai.organization = "org-w7nKit9OwsqNNO3i9GmXe5uk"
 
 util_logger = logging.getLogger(
@@ -186,11 +186,32 @@ def parse_checkpoint_path(args):
     return model_name, local_name, model_class
 
 
+class StopTokenCriteria(StoppingCriteria):
+    """
+    Stop when a stop token is generated.
+
+    :param stop_tokens_ids: the list of stop token ids
+    """
+
+    def __init__(self, stop_tokens_ids: list):
+        self.stop_tokens_ids = stop_tokens_ids
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        return np.any([x in input_ids for x in self.stop_tokens_ids])
+
+
 class Text2Generator():
     def __init__(self, model, tokenizer):
         self.model = model
         self.tokenizer = tokenizer
         self.tokenizer.pad_token = tokenizer.eos_token
+
+        stop_tokens = ['\n']
+        self.stop_condition = StopTokenCriteria(
+            [tokenizer.encode(
+                token, add_special_tokens=False
+            )[0] for token in stop_tokens]
+        )
 
     def generate(self, print_out, **generate_kwargs):
         device = torch.cuda.current_device()
@@ -217,7 +238,8 @@ class Text2Generator():
 
         greedy_outputs = self.model.generate(
             input_ids.to(device),
-            max_new_tokens=output_length,
+            max_new_tokens=32,
+            stopping_criteria=StoppingCriteriaList([self.stop_condition]),
             **generate_kwargs
         )
 
@@ -255,6 +277,20 @@ def run_acclerate(args):
     metric_file_pth = f"{args.run_dir}/{metirc_file_name}"
     tmp_out_file_pth = f"{args.run_dir}/tmp_{out_file_name}"
 
+    if args.model_name_or_path == 't5':
+        gen_kwargs = {
+            "num_beams": 10,
+            "do_sample": False,
+            "num_return_sequences": 1,
+        }
+    else:
+        gen_kwargs = {
+            "num_beams": 10,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "num_return_sequences": 1,
+        }
+
     output_all = []
     if not args.model_name_or_path == 'gpt3':
         model_name, local_name, model_class = parse_checkpoint_path(args)
@@ -273,8 +309,8 @@ def run_acclerate(args):
             print_out = batch["print_out"]
             pipe_out = generator.generate(
                 print_out,
-                num_beams=5,
-                num_return_sequences=1)
+                **gen_kwargs
+            )
             print_out["gen_out"] = pipe_out
             output_all.append({"print_out": print_out})
     else:
