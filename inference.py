@@ -17,8 +17,8 @@ from common_bench.dataset import CommonDataset
 from common_bench.model import TranslationOutput
 from common_bench.utils.py_io import *
 
-openai.api_key = "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"
-openai.organization = "org-w7nKit9OwsqNNO3i9GmXe5uk"
+# openai.api_key = XXXX
+# openai.organization = XXXX
 
 util_logger = logging.getLogger(
     'common_bench.inference'
