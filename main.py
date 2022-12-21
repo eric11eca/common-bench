@@ -43,8 +43,8 @@ def main():
                         help="Number of examples to use for in-context learning")
     parser.add_argument("--search", action='store_true',
                         help="search for in-context learning examples")
-    parser.add_argument("--embedding", default="simcl",
-                        help="embedding to use for search")
+    parser.add_argument("--encoder", default="simcl",
+                        help="encoder to use for search")
 
     # Training-related parameters
     parser.add_argument("--train_batch_size", default=8, type=int,
