@@ -1,5 +1,6 @@
 import uuid
 import torch
+import random
 
 from pprint import pprint
 from torch.utils.data import DataLoader
@@ -277,7 +278,7 @@ class CommonDataset(object):
         self.data, self.metadata = self.read_data_from_file()
 
         if args.max_data_size > 0:
-            self.data = self.data[:args.max_data_size]
+            self.data = random.choices(self.data, k=args.max_data_size)
 
     def __len__(self):
         return len(self.data)
