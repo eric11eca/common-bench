@@ -12,7 +12,7 @@ import numpy as np
 import torch
 
 from runner import run
-from inference import run_acclerate
+from inference import *
 
 
 def main():
@@ -80,7 +80,7 @@ def main():
     parser.add_argument("--verbose", action='store_true',
                         help="If true, all of the warnings related to data processing will be printed. "
                              "A number of warnings are expected for a normal SQuAD evaluation.")
-    parser.add_argument('--eval_period', type=int, default=100,
+    parser.add_argument('--eval_period', type=int, default=10,
                         help="Evaluate & save model")
     parser.add_argument('--prefix', type=str, default='',
                         help="Prefix for saving predictions")
@@ -110,6 +110,11 @@ def main():
                         type=str,
                         help="Specifies a location to an existing wandb model [default='']")
 
+    # for gpt3 api
+    parser.add_argument("--gpt3_key",
+                        type=str,
+                        required=False)
+
     args = parser.parse_args()
     if os.path.exists(args.output_dir) and os.listdir(args.output_dir):
         print("Output directory () already exists and is not empty.")
@@ -137,8 +142,11 @@ def main():
     run_dir = f"{args.output_dir}/{timestr}"
     os.makedirs(run_dir, exist_ok=True)
     args.run_dir = run_dir
+    
+    if args.model_name_or_path == 'gpt3':
+        run_gpt3(args)
 
-    if args.do_inference:
+    elif args.do_inference:
         run_acclerate(args)
     else:
         run(args)

@@ -175,7 +175,7 @@ class ScruplesAnecdoteDataReader(DataReader):
         elif "unifiedqa" in args.model_name_or_path:
             reformat = f"{question}\n{story}\n{options}"
         elif "flan" in args.model_name_or_path:
-            reformat = f"{context} \n Q: {question}\n{options}\nA:"
+            reformat = f"{story}\nQ: {question}\n{options}\nA:"
         else:
             #promtp = "Which one of these options best answers the question according to the context?"
             reformat = f"Context: {story}\nQuestion: {question}\nOptions:{options}\nAnswer:"
@@ -207,7 +207,7 @@ class ScruplesDilemmaDataReader(DataReader):
         elif "unifiedqa" in args.model_name_or_path:
             reformat = f"{question}\n{story}\n{options}"
         elif "flan" in args.model_name_or_path:
-            reformat = f"{context} \n Q: {question}\n{options}\nA:"
+            reformat = f"{story}\nQ: {question}\n{options}\nA:"
         else:
             #promtp = "Which one of these answers best answers the question according to the context?"
             reformat = f"Context: {story}\nQuestion: {question}\nOptions:{options}\nAnswer:"
