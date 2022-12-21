@@ -1,11 +1,11 @@
 #!/bin/bash
 
-DATASET="tomi"
-TASK="tomi"
+DATASET="socialiqa"
+TASK="socialiqa"
 MODEL_TYPE="opt"
-MODEL_NAME_OR_PATH="opt-66b"
+MODEL_NAME_OR_PATH="gpt3"
 TRAIN_BATCH_SIZE=4
-PREDICT_BATCH_SIZE=1
+PREDICT_BATCH_SIZE=16
 N_GPU=8
 
 mkdir -p data/${DATASET}
