@@ -119,26 +119,19 @@ class SocialIQADataReader(DataReader):
         return data, metadata
 
 
-class SocialChemDataReader(DataReader):
+class Com2senseDataReader(DataReader):
     @staticmethod
     def _read(instance, args):
         guid = instance["guid"]
-        situation = instance["situation"]
-        action = instance["action"]
+        context = instance["story"]
         answer = instance["answer"]
+        question = instance["question"]
         options = instance["options"]
-        metadata = instance["metadata"]
-
-        context = f"Situation: {situation}\nAction:{action}"
-        question = f"Given the situation, what do you think about the action?"
-
-        for i, o in enumerate(options):
-            if o == answer:
-                answer = f"{i}"
-                break
+        metadata = {"task": "com2sense"}
 
         options = [f"({i}) {o}" for i, o in enumerate(options)]
         options = " ".join(options)
+
         if "macaw" in args.model_name_or_path:
             reformat = f"$answer$ ; $mcoptions$ = {options}; $question$ = {question}; $context$ = {context}"
         elif "unifiedqa" in args.model_name_or_path:
@@ -146,7 +139,6 @@ class SocialChemDataReader(DataReader):
         elif "flan" in args.model_name_or_path:
             reformat = f"{context} \n Q: {question}\n{options}\nA:"
         else:
-            # promtp = "Which option best answers the question based on the context?"
             reformat = f"Context: {context}\nQuestion: {question}\nOptions:{options}\nAnswer:"
 
         data = {
@@ -264,7 +256,7 @@ class CommonDataset(object):
         reader_classes = {
             "tomi": TomiDataReader,
             "socialiqa": SocialIQADataReader,
-            "social-chem": SocialChemDataReader,
+            "com2sense": Com2senseDataReader,
             "dilemma": ScruplesDilemmaDataReader,
             "anecdote": ScruplesAnecdoteDataReader,
             "codah": CodahDataReader,
