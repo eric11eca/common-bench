@@ -2,6 +2,7 @@ import random
 import torch
 import wandb
 import logging
+import openai
 
 from tqdm import tqdm
 from pathlib import Path
@@ -13,6 +14,9 @@ from transformers import AutoModelForSeq2SeqLM, AutoModelForCausalLM
 from common_bench.dataset import CommonDataset
 from common_bench.model import TranslationOutput
 from common_bench.utils.py_io import *
+
+openai.api_key = "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"
+openai.organization = "org-w7nKit9OwsqNNO3i9GmXe5uk"
 
 util_logger = logging.getLogger(
     'common_bench.inference'
@@ -34,6 +38,8 @@ model_class_registry = {
     "bloom": AutoModelForCausalLM,
     "gpt": AutoModelForCausalLM
 }
+
+GPT3_ON = True
 
 
 def init_wandb(args):
@@ -224,40 +230,70 @@ class Text2Generator():
         return clean_outputs
 
 
+def query_gpt3(question):
+    response = openai.Completion.create(
+        model="text-davinci-002",
+        prompt=question,
+        temperature=0,
+        max_tokens=100,
+        top_p=1,
+        frequency_penalty=0,
+        presence_penalty=0
+    )
+
+    return response.choices[0].text.strip().replace("\n", "")
+
+
 def run_acclerate(args):
     torch.set_grad_enabled(False)
 
-    model_name, local_name, model_class = parse_checkpoint_path(args)
-    model, tokenizer, _ = load_model(model_name, local_name, model_class)
-
-    if args.model_type != "t5":
-        model.config.pad_token_id = tokenizer.eos_token_id
-        tokenizer.pad_token = tokenizer.eos_token
-        tokenizer.padding_side = 'left'
-
-    dataloader = load_data(args, tokenizer)
-    generator = Text2Generator(model, tokenizer)
-
-    output_all = []
-    for batch in tqdm(dataloader):
-        print_out = batch["print_out"]
-        pipe_out = generator.generate(
-            print_out,
-            num_beams=5,
-            # top_k=20,
-            num_return_sequences=1)
-        print_out["gen_out"] = pipe_out
-        output_all.append({"print_out": print_out})
-
     out_file_name = f"test_eval_out.json"
     metirc_file_name = f"test_metrics.json"
+    out_file_pth = f"{args.run_dir}/{out_file_name}"
+    metric_file_pth = f"{args.run_dir}/{metirc_file_name}"
+    tmp_out_file_pth = f"{args.run_dir}/tmp_{out_file_name}"
+
+    output_all = []
+    if not GPT3_ON:
+        model_name, local_name, model_class = parse_checkpoint_path(args)
+        model, tokenizer, _ = load_model(model_name, local_name, model_class)
+
+        if args.model_type != "t5":
+            model.config.pad_token_id = tokenizer.eos_token_id
+            tokenizer.pad_token = tokenizer.eos_token
+            tokenizer.padding_side = 'left'
+
+        tokenizer = AutoTokenizer.from_pretrained("bigscience/bloom")
+        dataloader = load_data(args, tokenizer)
+        generator = Text2Generator(model, tokenizer)
+
+        for batch in tqdm(dataloader):
+            print_out = batch["print_out"]
+            pipe_out = generator.generate(
+                print_out,
+                num_beams=5,
+                num_return_sequences=1)
+            print_out["gen_out"] = pipe_out
+            output_all.append({"print_out": print_out})
+    else:
+        tokenizer = AutoTokenizer.from_pretrained("gpt2")
+        tokenizer.pad_token = tokenizer.eos_token
+        dataloader = load_data(args, tokenizer)
+
+        output_all = []
+        for batch in tqdm(dataloader):
+            print_out = batch["print_out"]
+            pipe_out = [query_gpt3(q) for q in print_out["question"]]
+            print_out["gen_out"] = pipe_out
+            output_all.append({"print_out": print_out})
+            write_jsonl(output_all, tmp_out_file_pth)
 
     wandb_runner = init_wandb(args)
     metrics_out = evaluate_output(
         output_all,
         wandb_runner,
-        f"{args.run_dir}/{out_file_name}",
-        f"{args.run_dir}/{metirc_file_name}"
+        out_file_pth,
+        metric_file_pth
     )
 
     wandb_runner.log(metrics_out)
