@@ -42,7 +42,7 @@ class DataReader:
                 demos = examples
             for e in demos:
                 question = qa_data["question"]
-                prompt = f"{e['question']}\n{e['answer']} {question}"
+                prompt = f"{e['question']} {e['answer']}\n\n{question}"
                 qa_data['question'] = prompt
             total_qa_data.append(qa_data)
             total_metadata[qa_data["guid"]] = metadata
@@ -277,8 +277,8 @@ class CommonDataset(object):
         self.load = False
         self.data, self.metadata = self.read_data_from_file()
 
-        if args.max_data_size > 0:
-            self.data = random.choices(self.data, k=args.max_data_size)
+        if args.max_data > 0:
+            self.data = random.choices(self.data, k=args.max_data)
 
     def __len__(self):
         return len(self.data)
