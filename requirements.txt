@@ -12,3 +12,4 @@ fairscale
 deepspeed
 bitsandbytes
 accelerate
+simcse
