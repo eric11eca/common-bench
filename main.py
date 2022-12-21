@@ -73,6 +73,8 @@ def main():
                         help='The number of workers to use for data loading')
     parser.add_argument('--n_gpu', type=int, default=1,
                         help='The number of gpus to use')
+    parser.add_argument('--max_data', type=int, default=1000,
+                        help='The number maximu data to use')
     parser.add_argument('--load_checkpoint', type=str, default=None,
                         help='path to checkpoint')
 
@@ -142,11 +144,8 @@ def main():
     run_dir = f"{args.output_dir}/{timestr}"
     os.makedirs(run_dir, exist_ok=True)
     args.run_dir = run_dir
-    
-    if args.model_name_or_path == 'gpt3':
-        run_gpt3(args)
 
-    elif args.do_inference:
+    if args.do_inference:
         run_acclerate(args)
     else:
         run(args)
