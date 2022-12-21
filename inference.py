@@ -17,8 +17,9 @@ from common_bench.dataset import CommonDataset
 from common_bench.model import TranslationOutput
 from common_bench.utils.py_io import *
 
-# openai.api_key = XXXX
-# openai.organization = XXXX
+
+openai.api_key = key3
+openai.organization = org2
 
 util_logger = logging.getLogger(
     'common_bench.inference'
@@ -105,8 +106,18 @@ def load_data(args, tokenizer):
                 assert len(ic_examples[key]) == 16
                 ic_examples[key] = ic_examples[key][:args.num_examples]
         else:
-            ic_examples = random.choices(
-                train_data.data, k=args.num_examples)
+            if args.dataset == "com2sense":
+                true_examples, neg_examples = [], []
+                for instance in train_data.data:
+                    if instance["answer"] == "Yes":
+                        true_examples.append(instance)
+                    else:
+                        neg_examples.append(instance)
+                ic_examples = random.choices(true_examples, k=args.num_examples // 2) + \
+                    random.choices(neg_examples, k=args.num_examples // 2)
+            else:
+                ic_examples = random.choices(
+                    train_data.data, k=args.num_examples)
     else:
         ic_examples = []
 
@@ -206,7 +217,7 @@ class Text2Generator():
         self.tokenizer = tokenizer
         self.tokenizer.pad_token = tokenizer.eos_token
 
-        stop_tokens = ['\n']
+        stop_tokens = ['\n\n']
         self.stop_condition = StopTokenCriteria(
             [tokenizer.encode(
                 token, add_special_tokens=False
@@ -259,7 +270,7 @@ def query_gpt3(question):
         model="text-davinci-002",
         prompt=question,
         temperature=0,
-        max_tokens=100,
+        max_tokens=64,
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0
@@ -325,6 +336,9 @@ def run_acclerate(args):
             print_out["gen_out"] = pipe_out
             output_all.append({"print_out": print_out})
             write_jsonl(output_all, tmp_out_file_pth)
+
+        # output_all = read_jsonl(
+        #     "./output/20221221-173613/tmp_test_eval_out.json")
 
     wandb_runner = init_wandb(args)
     metrics_out = evaluate_output(
