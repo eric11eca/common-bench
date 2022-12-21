@@ -276,7 +276,8 @@ class CommonDataset(object):
         self.load = False
         self.data, self.metadata = self.read_data_from_file()
 
-        # self.data = self.data[:100]
+        if args.max_data_size > 0:
+            self.data = self.data[:args.max_data_size]
 
     def __len__(self):
         return len(self.data)
