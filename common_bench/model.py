@@ -33,7 +33,7 @@ model_path_hf = {
     "macaw-11b": ("allenai/macaw-11b", "chenz16/macaw-11b-sharded-fp16"),
     "bloom-3b": ("bigscience/bloom-3b", "sharded-bloom-3b"),
     "bloom-1b": ("bigscience/bloom-1b7", "sharded-bloom-1b7"),
-    "opt":'facebook/opt-66b'
+    "opt": 'facebook/opt-66b'
 }
 
 
@@ -191,16 +191,17 @@ class TransformerModel(nn.Module):
 class TranslationOutput:
     """Helper class for translation output"""
     print_data: Dict
+    config: Dict
 
     @ classmethod
-    def from_output(cls, output):
+    def from_output(cls, config, output):
         """Loads from raw outputs
 
         :param outputs: the outputs produced by the model
         """
 
         print_data = cls.get_print_data(output, "print_out")
-        return cls(print_data=print_data)
+        return cls(print_data=print_data, config=config)
 
     @ classmethod
     def get_print_data(cls, output, print_key):
@@ -267,7 +268,10 @@ class TranslationOutput:
         return white_space_fix(remove_articles(remove_punc(lower(text))))
 
     def compute_exact_match(self, prediction, truth):
-        return int(self.normalize_text(truth) in self.normalize_text(prediction))
+        if self.config["do_icl"]:
+            return int(self.normalize_text(truth) == self.normalize_text(prediction))
+        else:
+            return int(self.normalize_text(prediction) in self.normalize_text(truth))
 
     def compute_f1(self, prediction, truth):
         pred_tokens = self.normalize_text(prediction).split()
