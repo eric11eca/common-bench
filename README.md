@@ -45,7 +45,7 @@ pip install -r requirement.txt
 
 We tested our python codes on the interactive mode of RunAI @ EPFL cluster. Please look through if you are new user of [RunAI](https://github.com/sori424/runLLM).
 
-#  WANDB dataset/model versioning and loading
+####  WANDB dataset/model versioning and loading
 
 This repo is designed to work with wandb for dataset and model versioning, experimental visualization, etc.. Assuming that you have a [**wandb**](https://wandb.ai/home) account you first need to set your *WANDB_API_KEY*
 
@@ -73,19 +73,20 @@ DATASET="socialiqa"
 
 TASK="socialiqa"
 
-MODEL_TYPE="opt" <- select from ["t5", "opt", "bloom", "gpt"]
+MODEL_TYPE="opt" <-- select from ["t5", "opt", "bloom", "gpt"]
 
-MODEL_NAME_OR_PATH="facebook/opt-66b" <- volume directory with model checkpoints (.bin) or hugginface download ('facebook/opt-66b').
+MODEL_NAME_OR_PATH="facebook/opt-66b" <-- volume directory with model checkpoints (.bin) or hugginface download ('facebook/opt-66b').
 
-TRAIN_BATCH_SIZE=4   <- training batch size
+TRAIN_BATCH_SIZE=4   <-- training batch size
 
-PREDICT_BATCH_SIZE=1 <- prediction batch size
+PREDICT_BATCH_SIZE=1 <-- prediction batch size
 
-N_GPU=8 <- number of GPUs to use
+N_GPU=8 <-- number of GPUs to use
 
 ```
 
 ## In-context Learning
+
 To run the code for vinalla **In-context Learning**, first modify the running command in `run.sh`:
 ```
 
@@ -99,8 +100,8 @@ accelerate launch main.py \
 	--wandb_name ${MODEL_NAME_OR_PATH}-${DATASET}-icl-4-rand \
 	--n_gpu ${N_GPU} \
 	--max_data 0 \
-	--do_icl \			<- **Add this flag**
-	--num_examples 2	<- **Number of demonstrations used**
+	--do_icl \			<-- **Add this flag**
+	--num_examples 2	<-- **Number of demonstrations used**
 	
 ```
 Then, execute the script. To use examples pre-selected  by the KNN method, modify the running command:
@@ -118,8 +119,8 @@ accelerate launch main.py \
 	--max_data 0 \
 	--do_icl \			
 	--num_examples 2	
-	--search 			<- **Add this flag**
-	--encoder simcse	<- **Name of the sentence encoder for embedding**
+	--search 			<-- **Add this flag**
+	--encoder simcse	<-- **Name of the sentence encoder for embedding**
 ```
 Then, execute the script.
 
@@ -129,8 +130,8 @@ Then, execute the script.
 python dynamic_icl.py \
 	--dataset $DATASET_NAME \
 	--task $TASK_NAME \
-	--encoder_name simcse \ <- nli_mean or simcse
-	--metric cosine \	<- cosine or euclidean
+	--encoder_name simcse \ <-- nli_mean or simcse
+	--metric cosine \	<-- cosine or euclidean
 	--num_neighbors 16
 	
 ```
