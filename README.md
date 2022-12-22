@@ -35,6 +35,8 @@ We employed 5 different commonsense benchmarks from social interaction to ethica
 
 * [COmmonsense Dataset Adversarially-authored by Humans](https://arxiv.org/abs/1904.04365)
 
+## Download Datasets from: [https://drive.google.com/drive/folders/1eSjhEyg7w4wZJS39ptEimIi-4H2stT7h?usp=sharing](https://drive.google.com/drive/folders/1eSjhEyg7w4wZJS39ptEimIi-4H2stT7h?usp=sharing)
+
 ##  Installation
 
 ```
