@@ -189,7 +189,7 @@ class TransformerModel(nn.Module):
 
 @ dataclass
 class TranslationOutput:
-    """Helper class for translation output"""
+    """Helper class for generation output"""
     print_data: Dict
     config: Dict
 
@@ -268,12 +268,17 @@ class TranslationOutput:
         return white_space_fix(remove_articles(remove_punc(lower(text))))
 
     def compute_exact_match(self, prediction, truth):
+        """Computes the exact match between the prediction and the truth."""
         if self.config["do_icl"]:
             return int(self.normalize_text(truth) == self.normalize_text(prediction))
         else:
-            return int(self.normalize_text(prediction) in self.normalize_text(truth))
+            if len(prediction) > len(truth):
+                return int(self.normalize_text(truth) in self.normalize_text(prediction))
+            else:
+                return int(self.normalize_text(prediction) in self.normalize_text(truth))
 
     def compute_f1(self, prediction, truth):
+        """Computes the F1 score between the prediction and the truth."""
         pred_tokens = self.normalize_text(prediction).split()
         truth_tokens = self.normalize_text(truth).split()
 
@@ -289,8 +294,7 @@ class TranslationOutput:
         return 2 * (prec * rec) / (prec + rec)
 
     def enumerate_instances(self):
-        """Enumerate through instances for printing
-        """
+        """Enumerate through instances for printing"""
         guids = self.print_data["guid"]
         questions = self.questions
         targets = self.targets

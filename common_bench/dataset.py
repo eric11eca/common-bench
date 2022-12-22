@@ -93,11 +93,6 @@ class SocialIQADataReader(DataReader):
         options = instance["options"]
         metadata = instance["metadata"]
 
-        for i, o in enumerate(options):
-            if o == answer:
-                answer = f"{i}"
-                break
-
         options = [f"({i}) {o}" for i, o in enumerate(options)]
         options = " ".join(options)
 
