@@ -103,6 +103,7 @@ if __name__ == "__main__":
     parser.add_argument("--task", default="tomi")
     parser.add_argument("--encoder_name", default="simcse")
     parser.add_argument("--metric", default="cosine")
+    parser.add_argument("--embed_type", default="mean")
     parser.add_argument("--num_neighbors", default=16, type=int)
     args = parser.parse_args()
     args.model_name_or_path = "t5"
