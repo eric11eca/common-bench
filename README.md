@@ -7,13 +7,15 @@ EPFL Machine Learning course project 2. Associated with NLP Lab. Commonsense rea
 python -r requirement.txt
 ```
 
+We tested our python codes on the interactive mode of RunAI. Please look through if you are new user of [RunAI](https://github.com/sori424/runLLM).
+
 ## Run
 
 ```
 bash run.sh
 ```
 
-For running setup, you can change the configurations below depend on your need. 
+For running setup, you can change the configurations below. 
 
 ```
 DATASET="socialiqa"
@@ -24,15 +26,9 @@ TRAIN_BATCH_SIZE=4
 PREDICT_BATCH_SIZE=1
 N_GPU=8
 ```
-cf. MODEL? 
-model_class_registry = {
-    "t5": AutoModelForSeq2SeqLM,
-    "opt": AutoModelForCausalLM,
-    "bloom": AutoModelForCausalLM,
-    "gpt": AutoModelForCausalLM
-        }
-        
 
-        
-You need a wandb credentials.
-`MODEL_NAME_OR_PATH` can be a model path that you saved the model before (saved_)
+cf. MODEL_TYPE? 
+["t5", "opt", "bloom", "gpt"]
+
+MODEL_NAME_OR_PATH?
+Can be your volume directory with model checkpoints (.bin) or you can also directly download by passing argument (e.g., 'facebook/opt-66b').
