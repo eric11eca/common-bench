@@ -18,8 +18,8 @@ from common_bench.model import TranslationOutput
 from common_bench.utils.py_io import *
 
 
-openai.api_key = key3
-openai.organization = org2
+openai.api_key = "XXXXXXXXXX"
+openai.organization = "XXXXXXXXXX"
 
 util_logger = logging.getLogger(
     'common_bench.inference'
@@ -78,6 +78,7 @@ def load_data(args, tokenizer):
     :param args: the arguments for the model runner
     :param tokenizer: the tokenizer for the model runner
     """
+    ic_examples = []
     if args.do_icl:
         train_data = CommonDataset(
             util_logger,
@@ -106,6 +107,8 @@ def load_data(args, tokenizer):
                 assert len(ic_examples[key]) == 16
                 ic_examples[key] = ic_examples[key][:args.num_examples]
         else:
+            seeds = [100, 13, 21, 42, 87]
+            random.seed(seeds[4])
             if args.dataset == "com2sense":
                 true_examples, neg_examples = [], []
                 for instance in train_data.data:
@@ -118,8 +121,6 @@ def load_data(args, tokenizer):
             else:
                 ic_examples = random.choices(
                     train_data.data, k=args.num_examples)
-    else:
-        ic_examples = []
 
     test_data = CommonDataset(
         util_logger,
@@ -186,6 +187,7 @@ def evaluate_output(args, output, wandb_runner, out_file=None, metric_file=None)
 
 
 def parse_checkpoint_path(args):
+    """Function responsible for parsing the checkpoint path for the model runner."""
     model_class = model_class_registry[args.model_type]
     hf_name = model_path_hf[args.model_name_or_path]
     if isinstance(hf_name, tuple):
@@ -212,6 +214,8 @@ class StopTokenCriteria(StoppingCriteria):
 
 
 class Text2Generator():
+    """Class for generating text from a prompt."""
+
     def __init__(self, model, tokenizer):
         self.model = model
         self.tokenizer = tokenizer
@@ -225,6 +229,12 @@ class Text2Generator():
         )
 
     def generate(self, print_out, **generate_kwargs):
+        """Generate text from a prompt.
+
+        :param print_out: the prompt to generate text from
+        :param generate_kwargs: the keyword arguments for the generate function
+        :return: the generated text
+        """
         device = torch.cuda.current_device()
 
         output_length = 0
@@ -250,7 +260,6 @@ class Text2Generator():
         greedy_outputs = self.model.generate(
             input_ids.to(device),
             max_new_tokens=32,
-            stopping_criteria=StoppingCriteriaList([self.stop_condition]),
             **generate_kwargs
         )
 
@@ -266,6 +275,11 @@ class Text2Generator():
 
 
 def query_gpt3(question):
+    """Query GPT-3 for an answer.
+
+    :param question: the question to ask GPT-3
+    :return: the answer from GPT-3
+    """
     response = openai.Completion.create(
         model="text-davinci-002",
         prompt=question,
@@ -280,6 +294,7 @@ def query_gpt3(question):
 
 
 def run_acclerate(args):
+    """Run the model on the accelerator."""
     torch.set_grad_enabled(False)
 
     out_file_name = f"test_eval_out.json"
@@ -336,9 +351,6 @@ def run_acclerate(args):
             print_out["gen_out"] = pipe_out
             output_all.append({"print_out": print_out})
             write_jsonl(output_all, tmp_out_file_pth)
-
-        # output_all = read_jsonl(
-        #     "./output/20221221-173613/tmp_test_eval_out.json")
 
     wandb_runner = init_wandb(args)
     metrics_out = evaluate_output(
