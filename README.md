@@ -13,10 +13,12 @@ Also, we employed large language models.
 * [GPT3](https://openai.com/api/)
 
 ### Human-centered Commonsense Benchmark
-* []()
-*
-*
-*
+
+* [Theory of Mind Task Dataset](https://arxiv.org/abs/1808.09352)
+* [Social Interaction QA](https://arxiv.org/abs/1904.09728)
+* [Complementary Commonsense](https://arxiv.org/abs/2106.00969)
+* [SCRUPLES](https://paperswithcode.com/paper/scruples-a-corpus-of-community-ethical)
+* [COmmonsense Dataset Adversarially-authored by Humans](https://arxiv.org/abs/1904.04365)
 
 ## Installation
 
@@ -35,17 +37,11 @@ bash run.sh
 For running setup, you can change the configurations below. 
 
 ```
-DATASET="socialiqa"
+DATASET="socialiqa" 
 TASK="socialiqa"
-MODEL_TYPE="opt"
-MODEL_NAME_OR_PATH="facebook/opt-66b"
+MODEL_TYPE="opt" # ["t5", "opt", "bloom", "gpt"]
+MODEL_NAME_OR_PATH="facebook/opt-66b" # volume directory with model checkpoints (.bin) or hugginface download ('facebook/opt-66b').
 TRAIN_BATCH_SIZE=4
 PREDICT_BATCH_SIZE=1
 N_GPU=8
 ```
-
-cf. MODEL_TYPE? 
-["t5", "opt", "bloom", "gpt"]
-
-MODEL_NAME_OR_PATH?
-Can be your volume directory with model checkpoints (.bin) or you can also directly download by passing argument (e.g., 'facebook/opt-66b').
