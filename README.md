@@ -23,12 +23,25 @@ We employed 5 different commonsense benchmarks from social interaction to ethica
 ## Installation
 
 ```
-python -r requirement.txt
+pip install -r requirement.txt
 ```
 
 We tested our python codes on the interactive mode of RunAI @ EPFL cluster. Please look through if you are new user of [RunAI](https://github.com/sori424/runLLM).
 
-You need a [wandb](https://wandb.ai/site) account. 
+# WANDB dataset/model versioning and loading
+This repo is designed to work with wandb for dataset and model
+versioning, experimental visualization, etc.. Assuming that you have a
+[**wandb**](https://wandb.ai/home) account you first need to set your
+*WANDB_API_KEY*
+```bash
+export WANDB_API_KEY=XXXXXXXXXXXXXXXX
+```
+In the code above you can then specify: `--wandb_entity`,
+`--wandb_project` (the target project), `--wandb_name` (name of
+experiment), `--wandb_data` (for automatic loading of data),
+`--wandb_model` (for automatic loading of models). In **RunAI** wandb
+can be used by adding `WANDB_API_KEY` to the `env` variables in the
+yaml script (see below). You need a [wandb](https://wandb.ai/site) account. 
 
 ## Quickstart
 
