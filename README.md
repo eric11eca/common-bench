@@ -1,6 +1,23 @@
 # ML Project 2: Human-centerd Commonsense Benchmark
 EPFL Machine Learning course project 2. Associated with NLP Lab. Commonsense reasoning benchmark and probing for large language models.
 
+### Baseline Models:
+We employed [T5](https://arxiv.org/pdf/1910.10683.pdf) based models.
+* [UnifiedQA](https://arxiv.org/abs/2005.00700)
+* [Macaw](https://arxiv.org/abs/2109.02593)
+* [FLAN](https://ai.googleblog.com/2021/10/introducing-flan-more-generalizable.html)
+* [T0++](https://huggingface.co/bigscience/T0pp)
+
+Also, we employed large language models.
+* [OPT66B](https://huggingface.co/facebook/opt-66b/tree/main)
+* [GPT3](https://openai.com/api/)
+
+### Human-centered Commonsense Benchmark
+* []()
+*
+*
+*
+
 ## Installation
 
 ```
