@@ -1,33 +1,39 @@
 # ML Project 2: Human-centerd Commonsense Benchmark
 EPFL Machine Learning course project 2. Associated with NLP Lab. Commonsense reasoning benchmark and probing for large language models.
 
-Topics
-Resources
- Readme
- 0 Bytes
-License
- MIT license
-Stars
- 0 stars
-Watchers
- 1 watching
-Forks
- 0 forks
-Releases
-No releases published
-Create a new release
-Packages
-No packages published
-Publish your first package
-Languages
-Python
-79.8%
- 
-Jupyter Notebook
-11.9%
- 
-Shell
-6.0%
- 
-Dockerfile
-2.3%
+## Installation
+
+```
+python -r requirement.txt
+```
+You need a wandb credentials.
+
+## Run
+
+```
+bash run.sh
+```
+
+### For running setup
+
+Change the configurations below depend on your need. 
+
+```
+DATASET="socialiqa"
+TASK="socialiqa"
+MODEL_TYPE="opt"
+MODEL_NAME_OR_PATH="facebook/opt-66b"
+TRAIN_BATCH_SIZE=4
+PREDICT_BATCH_SIZE=1
+N_GPU=8
+```
+cf.
+
+* MODEL? model_class_registry = {
+    "t5": AutoModelForSeq2SeqLM,
+    "opt": AutoModelForCausalLM,
+    "bloom": AutoModelForCausalLM,
+    "gpt": AutoModelForCausalLM
+}
+
+`MODEL_NAME_OR_PATH` can be a model path that you saved the model before (saved_)
