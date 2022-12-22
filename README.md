@@ -26,7 +26,7 @@ We employed 5 different commonsense benchmarks from social interaction to ethica
 python -r requirement.txt
 ```
 
-We tested our python codes on the interactive mode of RunAI. Please look through if you are new user of [RunAI](https://github.com/sori424/runLLM).
+We tested our python codes on the interactive mode of RunAI @ EPFL cluster. Please look through if you are new user of [RunAI](https://github.com/sori424/runLLM).
 
 You need a [wandb](https://wandb.ai/site) account. 
 
